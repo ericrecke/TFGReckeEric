@@ -49,8 +49,6 @@ const register = async (req, res) => {
                 role: user.role
             }
         });
-
-        res.status(201).json({ token });
     } catch (error) {
         console.error('Error during registration:', error);
         res.status(500).json({ message: 'Server error' });
