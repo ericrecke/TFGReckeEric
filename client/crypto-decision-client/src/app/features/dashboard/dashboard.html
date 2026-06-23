@@ -1,0 +1,24 @@
+<main class="min-vh-100 bg-light">
+  <nav class="navbar bg-white border-bottom shadow-sm">
+    <div class="container py-2">
+      <div>
+        <h1 class="navbar-brand mb-0">Crypto Decision Support</h1>
+        <p class="text-secondary small mb-0">Sistema de soporte a decisiones para trading de criptomonedas</p>
+      </div>
+
+      <button type="button" class="btn btn-outline-danger" (click)="logout()">Cerrar sesion</button>
+    </div>
+  </nav>
+
+  <div class="container py-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h4 mb-3">Bienvenido, {{ user?.email }}</h2>
+        <p class="text-secondary mb-0">
+          En esta seccion se visualizaran los datos de mercado, indicadores,
+          recomendaciones y operaciones registradas.
+        </p>
+      </div>
+    </div>
+  </div>
+</main>

@@ -20,8 +20,10 @@ const isPasswordSecure = (password) => {
 
 const register = async (req, res) => {
     try {
-        const { name, email, password } = req.body;
-        if (!name || !email || !password) {
+        const { name, username, email, password } = req.body;
+        const displayName = name || username;
+
+        if (!displayName || !email || !password) {
             return res.status(400).json({ message: 'Name, email, and password are required' });
         }
 
@@ -38,7 +40,7 @@ const register = async (req, res) => {
 
         const passwordHash = await bcrypt.hash(password, 10);
 
-        const user = await User.create({ name, email, passwordHash });
+        const user = await User.create({ name: displayName, email, passwordHash });
 
         return res.status(201).json({
             message: "User registered successfully",
@@ -57,15 +59,16 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, username, password } = req.body;
+        const loginEmail = email || username;
 
-        if (!email || !password) {
+        if (!loginEmail || !password) {
             return res.status(400).json({
                 message: "Email and password are required"
             });
         }
 
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email: loginEmail });
 
         if (!user) {
             return res.status(401).json({
