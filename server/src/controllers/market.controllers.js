@@ -1,10 +1,11 @@
 const MarketData = require('../models/MarketData');
 const marketService = require('../services/market.service');
+const indicatorService = require('../services/indicator.service');
 
 const getSymbols = async (req, res) => {
     try {
         const symbols = await marketService.getAllowedSymbols();
-        res.json(symbols);
+        res.json({ symbols });
     } catch (error) {
         console.error('Error fetching symbols:', error);
         res.status(500).json({ error: 'Failed to fetch symbols' });
@@ -17,10 +18,12 @@ const getMarketDataBySymbol = async (req, res) => {
     try {
         const marketData = await marketService.getTicker24h(symbol);
         const savedMarketData = await MarketData.create(marketData);
+        const indicator = await indicatorService.calculateAndSaveIndicators(savedMarketData);
 
         return res.json({
             message: 'Market data saved successfully',
-            data: savedMarketData
+            data: savedMarketData,
+            indicator
         });
     } catch (error) {
         console.error('Error fetching market data:', error);

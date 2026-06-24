@@ -20,7 +20,14 @@ export interface LoginResponse {
     message: string;
     user: AuthUser;
     token: string;
+    refreshToken: string;
 }
+
+export interface RefreshTokenRequest {
+    refreshToken: string;
+}
+
+export interface RefreshTokenResponse extends LoginResponse {}
 
 export interface RegisterResponse {
     message: string;

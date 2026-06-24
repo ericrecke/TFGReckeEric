@@ -2,6 +2,15 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
+const getRefreshSecret = () => process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET;
+
+const buildAuthUser = (user) => ({
+    id: user._id,
+    name: user.name,
+    email: user.email,
+    role: user.role
+});
+
 const generateToken = (user) => {
     return jwt.sign({
         id: user._id,
@@ -10,6 +19,16 @@ const generateToken = (user) => {
     },
         process.env.JWT_SECRET,
         { expiresIn: '1h' }
+    );
+};
+
+const generateRefreshToken = (user) => {
+    return jwt.sign({
+        id: user._id,
+        type: 'refresh'
+    },
+        getRefreshSecret(),
+        { expiresIn: '7d' }
     );
 };
 
@@ -44,12 +63,7 @@ const register = async (req, res) => {
 
         return res.status(201).json({
             message: "User registered successfully",
-            user: {
-                id: user._id,
-                name: user.name,
-                email: user.email,
-                role: user.role
-            }
+            user: buildAuthUser(user)
         });
     } catch (error) {
         console.error('Error during registration:', error);
@@ -85,22 +99,50 @@ const login = async (req, res) => {
         }
 
         const token = generateToken(user);
+        const refreshToken = generateRefreshToken(user);
 
         return res.json({
             message: 'Login successful',
             token,
-            user: {
-                id: user._id,
-                name: user.name,
-                email: user.email,
-                role: user.role
-            }
+            refreshToken,
+            user: buildAuthUser(user)
         });
     } catch (error) {
         return res.status(500).json({
             message: 'Error occurred while logging in',
             error: error.message
         });
+    }
+};
+
+const refresh = async (req, res) => {
+    try {
+        const { refreshToken } = req.body;
+
+        if (!refreshToken) {
+            return res.status(400).json({ message: 'Refresh token is required' });
+        }
+
+        const decoded = jwt.verify(refreshToken, getRefreshSecret());
+
+        if (decoded.type !== 'refresh') {
+            return res.status(401).json({ message: 'Invalid refresh token' });
+        }
+
+        const user = await User.findById(decoded.id);
+
+        if (!user) {
+            return res.status(401).json({ message: 'User not found' });
+        }
+
+        return res.json({
+            message: 'Token refreshed successfully',
+            token: generateToken(user),
+            refreshToken: generateRefreshToken(user),
+            user: buildAuthUser(user)
+        });
+    } catch (error) {
+        return res.status(401).json({ message: 'Invalid or expired refresh token' });
     }
 };
 
@@ -113,5 +155,6 @@ const profile = async (req, res) => {
 module.exports = {
     register,
     login,
+    refresh,
     profile
 };

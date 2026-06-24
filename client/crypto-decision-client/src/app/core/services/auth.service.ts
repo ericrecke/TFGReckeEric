@@ -6,7 +6,8 @@ import {
   LoginResponse,
   RegisterRequest,
   RegisterResponse,
-  AuthUser
+  AuthUser,
+  RefreshTokenResponse
 } from '../../shared/models/auth.models';
 
 @Injectable({
@@ -15,6 +16,7 @@ import {
 export class AuthService {
   private readonly apiUrl = 'http://localhost:3000/api/auth';
   private readonly tokenKey = 'crypto_decision_token';
+  private readonly refreshTokenKey = 'crypto_decision_refresh_token';
   private readonly userKey = 'crypto_decision_user';
 
   constructor(private http: HttpClient) { }
@@ -25,10 +27,15 @@ export class AuthService {
 
   login(data: LoginRequest): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${this.apiUrl}/login`, data).pipe(
-      tap((response) => {
-        localStorage.setItem(this.tokenKey, response.token);
-        localStorage.setItem(this.userKey, JSON.stringify(response.user));
-      })
+      tap((response) => this.storeSession(response))
+    );
+  }
+
+  refreshToken(): Observable<RefreshTokenResponse> {
+    return this.http.post<RefreshTokenResponse>(`${this.apiUrl}/refresh`, {
+      refreshToken: this.getRefreshToken()
+    }).pipe(
+      tap((response) => this.storeSession(response))
     );
   }
 
@@ -46,17 +53,28 @@ export class AuthService {
     return localStorage.getItem(this.tokenKey);
   }
 
+  getRefreshToken(): string | null {
+    return localStorage.getItem(this.refreshTokenKey);
+  }
+
   getCurrentUser(): AuthUser | null {
     const user = localStorage.getItem(this.userKey);
     return user ? JSON.parse(user) : null;
   }
 
   isAuthenticated(): boolean {
-    return !!this.getToken();
+    return !!this.getToken() || !!this.getRefreshToken();
   }
 
   logout(): void {
     localStorage.removeItem(this.tokenKey);
+    localStorage.removeItem(this.refreshTokenKey);
     localStorage.removeItem(this.userKey);
+  }
+
+  private storeSession(response: LoginResponse): void {
+    localStorage.setItem(this.tokenKey, response.token);
+    localStorage.setItem(this.refreshTokenKey, response.refreshToken);
+    localStorage.setItem(this.userKey, JSON.stringify(response.user));
   }
 }
