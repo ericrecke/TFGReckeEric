@@ -1,0 +1,151 @@
+.analysis-shell {
+  grid-template-columns: 240px 1fr;
+  background: #07111f;
+  color: #e5eefc;
+}
+
+.sidebar {
+  background: linear-gradient(180deg, #081426 0%, #06101e 100%);
+  border-right: 1px solid #172337;
+}
+
+.brand-mark,
+.user-avatar {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #0d6efd;
+  color: #ffffff;
+  font-weight: 800;
+  flex: 0 0 auto;
+}
+
+.sidebar-user {
+  border-top: 1px solid #172337;
+}
+
+.nav-link {
+  color: #aeb9cc;
+  cursor: pointer;
+}
+
+.nav-link:hover,
+.nav-link.active {
+  color: #ffffff;
+}
+
+.analysis-page {
+  min-width: 0;
+}
+
+.analysis-card,
+.indicator-tile {
+  background: #0d1b2d;
+  border: 1px solid #1c2c42;
+}
+
+.form-select-dark,
+.form-control-dark,
+.input-group-text {
+  background-color: #081426;
+  border-color: #1c2c42;
+  color: #e5eefc;
+}
+
+.chart-wrapper {
+  height: 320px;
+  position: relative;
+}
+
+.indicator-tile span,
+.indicator-tile small {
+  display: block;
+  font-size: 12px;
+}
+
+.indicator-tile span {
+  color: #8b98ad;
+}
+
+.indicator-tile strong {
+  display: block;
+  color: #ffffff;
+  font-size: 22px;
+}
+
+.recommendation-layout {
+  display: grid;
+  grid-template-columns: 70px 1fr 150px minmax(260px, 1.4fr);
+  gap: 18px;
+  align-items: center;
+}
+
+.recommendation-icon {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #facc15;
+  color: #111827;
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.recommendation-title {
+  color: #facc15;
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.confidence-bar {
+  max-width: 180px;
+}
+
+.disclaimer {
+  background: #081426;
+  border: 1px solid #1c2c42;
+  color: #8b98ad;
+  font-size: 12px;
+  padding: 10px 12px;
+  text-align: center;
+}
+
+.positive-text {
+  color: #22c55e !important;
+}
+
+.warning-text {
+  color: #facc15 !important;
+}
+
+@media (max-width: 1020px) {
+  .analysis-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar .nav {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .recommendation-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .analysis-page {
+    padding: 18px !important;
+  }
+
+  .chart-wrapper {
+    height: 280px;
+  }
+
+  .sidebar .nav {
+    grid-template-columns: 1fr;
+  }
+}

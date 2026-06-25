@@ -1,0 +1,196 @@
+<div class="analysis-shell d-grid min-vh-100">
+  <aside class="sidebar d-flex flex-column gap-4 p-3">
+    <div class="d-flex align-items-center gap-2">
+      <div class="brand-mark">DS</div>
+      <div>
+        <strong class="d-block text-white">DSS Trading</strong>
+        <span class="text-secondary small">Soporte a decisiones</span>
+      </div>
+    </div>
+
+    <nav class="nav nav-pills flex-column gap-2" aria-label="Navegacion principal">
+      <a class="nav-link" routerLink="/dashboard">Dashboard</a>
+      <a class="nav-link active">Analisis</a>
+      <a class="nav-link">Recomendaciones</a>
+      <a class="nav-link">Operaciones</a>
+      <a class="nav-link">Historial</a>
+      <a class="nav-link">Configuracion</a>
+    </nav>
+
+    <div class="sidebar-user d-flex align-items-center gap-2 mt-auto pt-3">
+      <div class="user-avatar">{{ user?.name?.charAt(0) || 'U' }}</div>
+      <div class="min-w-0">
+        <strong class="d-block text-white">{{ user?.name || 'Usuario' }}</strong>
+        <span class="d-block text-secondary small text-truncate">{{ user?.email }}</span>
+      </div>
+    </div>
+  </aside>
+
+  <main class="analysis-page p-4">
+    <header class="d-flex align-items-center justify-content-between gap-3 mb-4 flex-wrap">
+      <div>
+        <h1 class="h3 text-white mb-1">Analisis de activo</h1>
+        <p class="text-secondary mb-0">Evaluacion de indicadores, riesgo y recomendacion orientativa</p>
+      </div>
+
+      <button class="btn btn-danger fw-bold" type="button" (click)="logout()">Cerrar sesion</button>
+    </header>
+
+    <div class="alert alert-danger" *ngIf="errorMessage">{{ errorMessage }}</div>
+    <div class="alert alert-success" *ngIf="successMessage">{{ successMessage }}</div>
+
+    <section class="analysis-card rounded-3 p-3 mb-3">
+      <h2 class="h6 text-white mb-3">Parametros de analisis</h2>
+
+      <div class="row g-3">
+        <div class="col-12 col-md-4">
+          <label class="form-label text-secondary">Activo</label>
+          <select class="form-select form-select-dark" [(ngModel)]="selectedSymbol" (ngModelChange)="onAnalysisFilterChange()">
+            <option *ngFor="let symbol of symbols" [value]="symbol">{{ symbol }}</option>
+          </select>
+        </div>
+
+        <div class="col-12 col-md-4">
+          <label class="form-label text-secondary">Temporalidad</label>
+          <select class="form-select form-select-dark" [(ngModel)]="selectedTimeframe" (ngModelChange)="onAnalysisFilterChange()">
+            <option value="1H">1H</option>
+            <option value="4H">4H</option>
+            <option value="1D">1D</option>
+            <option value="1W">1W</option>
+          </select>
+        </div>
+
+        <div class="col-12 col-md-4">
+          <label class="form-label text-secondary">Estrategia</label>
+          <select class="form-select form-select-dark" [(ngModel)]="selectedStrategy" (ngModelChange)="onAnalysisFilterChange()">
+            <option value="trend">Tendencia</option>
+            <option value="breakout">Ruptura</option>
+            <option value="mean-reversion">Reversion a la media</option>
+          </select>
+        </div>
+
+        <div class="col-12">
+          <button class="btn btn-primary fw-bold px-4" type="button" (click)="generateAnalysis()" [disabled]="loading">
+            {{ loading ? 'Generando...' : 'Generar analisis' }}
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="row g-3 mb-3">
+      <article class="col-12 col-xl-8">
+        <div class="analysis-card rounded-3 p-3 h-100">
+          <h2 class="h6 text-white mb-3">Grafico e indicadores</h2>
+
+          <div class="chart-wrapper mb-3">
+            <canvas #analysisChart></canvas>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-6 col-lg-3">
+              <div class="indicator-tile rounded-3 p-3 text-center">
+                <span>RSI</span>
+                <strong>{{ selectedIndicator?.rsi ?? 'N/D' }}</strong>
+                <small class="warning-text">{{ selectedIndicator?.rsi ? getRiskLevel() : 'Sin datos' }}</small>
+              </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+              <div class="indicator-tile rounded-3 p-3 text-center">
+                <span>SMA</span>
+                <strong>{{ selectedIndicator?.sma ?? 'N/D' }}</strong>
+                <small class="positive-text">Referencia</small>
+              </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+              <div class="indicator-tile rounded-3 p-3 text-center">
+                <span>EMA</span>
+                <strong>{{ selectedIndicator?.ema ?? 'N/D' }}</strong>
+                <small class="positive-text">Dinamica</small>
+              </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+              <div class="indicator-tile rounded-3 p-3 text-center">
+                <span>Volumen 24h</span>
+                <strong>{{ selectedMarketData?.volume | number:'1.0-2' }}</strong>
+                <small class="positive-text">Activo</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <aside class="col-12 col-xl-4">
+        <div class="analysis-card rounded-3 p-3 h-100">
+          <h2 class="h6 text-white mb-3">Parametros de riesgo</h2>
+
+          <label class="form-label text-secondary">Capital disponible</label>
+          <div class="input-group mb-3">
+            <input class="form-control form-control-dark" type="number" [(ngModel)]="capital" min="0">
+            <span class="input-group-text">USDT</span>
+          </div>
+
+          <label class="form-label text-secondary">Riesgo maximo por operacion</label>
+          <div class="input-group mb-3">
+            <input class="form-control form-control-dark" type="number" [(ngModel)]="maxRiskPercent" min="0" max="100">
+            <span class="input-group-text">%</span>
+          </div>
+
+          <label class="form-label text-secondary">Stop Loss</label>
+          <div class="input-group mb-3">
+            <input class="form-control form-control-dark" type="number" [(ngModel)]="stopLossPercent" min="0">
+            <span class="input-group-text">%</span>
+          </div>
+
+          <label class="form-label text-secondary">Take Profit</label>
+          <div class="input-group mb-3">
+            <input class="form-control form-control-dark" type="number" [(ngModel)]="takeProfitPercent" min="0">
+            <span class="input-group-text">%</span>
+          </div>
+
+          <button class="btn btn-outline-primary w-100 fw-bold" type="button" (click)="saveParameters()" [disabled]="saving">
+            {{ saving ? 'Guardando...' : 'Guardar parametros' }}
+          </button>
+        </div>
+      </aside>
+    </section>
+
+    <section class="analysis-card rounded-3 p-3">
+      <div class="recommendation-layout">
+        <div class="recommendation-icon">!</div>
+
+        <div>
+          <span class="text-secondary small">Resultado</span>
+          <h2 class="recommendation-title mb-1">{{ getRecommendationResult() }}</h2>
+          <span class="text-secondary small">Nivel de confianza</span>
+          <div class="progress confidence-bar mt-1">
+            <div class="progress-bar bg-success" [style.width.%]="getConfidencePercent()">
+              {{ getConfidencePercent() }}%
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <span class="text-secondary small">Riesgo estimado</span>
+          <strong class="d-block warning-text">{{ getRiskLevel() }}</strong>
+        </div>
+
+        <div>
+          <span class="text-secondary small">Motivo</span>
+          <p class="mb-0 text-light">{{ getRecommendationReason() }}</p>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2 mt-3 flex-wrap">
+        <button class="btn btn-primary fw-bold" type="button">Registrar operacion</button>
+        <button class="btn btn-outline-primary fw-bold" type="button">Crear alerta</button>
+      </div>
+
+      <p class="disclaimer rounded-3 mt-3 mb-0">
+        Las recomendaciones son orientativas. La decision final corresponde al usuario.
+      </p>
+    </section>
+  </main>
+</div>

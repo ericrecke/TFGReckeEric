@@ -1,7 +1,7 @@
 import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CommonModule, DecimalPipe, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { finalize, forkJoin, interval, Subject, takeUntil } from 'rxjs';
 import type { Chart as ChartType } from 'chart.js';
 
@@ -13,7 +13,7 @@ import { AuthUser } from '../../shared/models/auth.models';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, DecimalPipe, DatePipe, FormsModule],
+  imports: [CommonModule, DecimalPipe, DatePipe, FormsModule, RouterModule],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss'
 })
