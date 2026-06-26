@@ -10,12 +10,32 @@ const riskParametersSchema = new mongoose.Schema(
     { _id: false }
 );
 
+const machineLearningSchema = new mongoose.Schema(
+    {
+        predictedResult: {
+            type: String,
+            enum: ['COMPRAR', 'ESPERAR', 'VENDER'],
+            required: true
+        },
+        confidencePercent: { type: Number, required: true },
+        probabilities: {
+            sell: { type: Number, required: true },
+            hold: { type: Number, required: true },
+            buy: { type: Number, required: true }
+        },
+        model: { type: String, required: true },
+        trainingSamples: { type: Number, required: true }
+    },
+    { _id: false }
+);
+
 const recommendationSchema = new mongoose.Schema(
     {
         result: { type: String, enum: ['COMPRAR', 'ESPERAR', 'VENDER'], required: true },
         confidencePercent: { type: Number, required: true },
         riskLevel: { type: String, enum: ['Bajo', 'Medio', 'Alto'], required: true },
-        reason: { type: String, required: true }
+        reason: { type: String, required: true },
+        machineLearning: { type: machineLearningSchema, default: null }
     },
     { _id: false }
 );

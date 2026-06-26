@@ -1,104 +1,65 @@
+const { EMA, MACD, RSI, SMA } = require('technicalindicators');
+
 const Indicator = require('../models/Indicator');
 const MarketData = require('../models/MarketData');
 
 const DEFAULT_PERIOD = 14;
 
 const roundIndicator = (value) => {
-    if (value === null || Number.isNaN(value)) {
+    if (value === null || value === undefined || Number.isNaN(value)) {
         return null;
     }
 
     return Number(value.toFixed(4));
 };
 
-const calculateSma = (prices, period) => {
-    if (prices.length < period) {
-        return null;
-    }
-
-    const sample = prices.slice(-period);
-    const total = sample.reduce((sum, price) => sum + price, 0);
-    return total / period;
+const getLatestValue = (values) => {
+    return values.length ? values[values.length - 1] : null;
 };
 
-const calculateEma = (prices, period) => {
-    if (prices.length < period) {
-        return null;
-    }
-
-    const multiplier = 2 / (period + 1);
-    const firstSample = prices.slice(0, period);
-    let ema = firstSample.reduce((sum, price) => sum + price, 0) / period;
-
-    for (const price of prices.slice(period)) {
-        ema = (price - ema) * multiplier + ema;
-    }
-
-    return ema;
-};
-
-const calculateRsi = (prices, period) => {
-    if (prices.length <= period) {
-        return null;
-    }
-
-    const sample = prices.slice(-(period + 1));
-    let gains = 0;
-    let losses = 0;
-
-    for (let index = 1; index < sample.length; index += 1) {
-        const difference = sample[index] - sample[index - 1];
-
-        if (difference >= 0) {
-            gains += difference;
-        } else {
-            losses += Math.abs(difference);
-        }
-    }
-
-    const averageGain = gains / period;
-    const averageLoss = losses / period;
-
-    if (averageLoss === 0) {
-        return 100;
-    }
-
-    const relativeStrength = averageGain / averageLoss;
-    return 100 - (100 / (1 + relativeStrength));
-};
-
-const calculateMacd = (prices) => {
-    const shortEma = calculateEma(prices, 12);
-    const longEma = calculateEma(prices, 26);
-
-    if (shortEma === null || longEma === null) {
-        return null;
-    }
-
-    return shortEma - longEma;
-};
-
-const calculateAndSaveIndicators = async (marketData, period = DEFAULT_PERIOD) => {
-    const symbol = String(marketData.symbol).toUpperCase();
+const getStoredPrices = async (symbol) => {
     const history = await MarketData.find({ symbol })
-        .sort({ timestamp: 1 })
+        .sort({ timestamp: -1 })
         .limit(100);
 
-    const prices = history.map((item) => item.price);
+    return history.reverse().map((item) => item.price);
+};
 
-    const indicator = await Indicator.create({
+const calculateAndSaveIndicators = async (
+    marketData,
+    period = DEFAULT_PERIOD,
+    suppliedPrices = null
+) => {
+    const symbol = String(marketData.symbol).toUpperCase();
+    const prices = suppliedPrices?.length
+        ? suppliedPrices.map(Number).filter(Number.isFinite)
+        : await getStoredPrices(symbol);
+
+    const sma = getLatestValue(SMA.calculate({ period, values: prices }));
+    const ema = getLatestValue(EMA.calculate({ period, values: prices }));
+    const rsi = getLatestValue(RSI.calculate({ period, values: prices }));
+    const macdResult = getLatestValue(MACD.calculate({
+        values: prices,
+        fastPeriod: 12,
+        slowPeriod: 26,
+        signalPeriod: 9,
+        SimpleMAOscillator: false,
+        SimpleMASignal: false
+    }));
+    const macd = macdResult?.MACD ?? null;
+
+    return Indicator.create({
         symbol,
         marketData: marketData._id,
-        sma: roundIndicator(calculateSma(prices, period)),
-        ema: roundIndicator(calculateEma(prices, period)),
-        rsi: roundIndicator(calculateRsi(prices, period)),
-        macd: roundIndicator(calculateMacd(prices)),
-        movingAverage: roundIndicator(calculateSma(prices, period)),
+        sma: roundIndicator(sma),
+        ema: roundIndicator(ema),
+        rsi: roundIndicator(rsi),
+        macd: roundIndicator(macd),
+        movingAverage: roundIndicator(sma),
         period: String(period),
+        source: 'technicalindicators',
         timestamp: marketData.timestamp
     });
-
-    return indicator;
 };
 
 module.exports = {

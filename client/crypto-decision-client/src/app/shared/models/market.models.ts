@@ -24,6 +24,7 @@ export interface TechnicalIndicator {
   sma: number | null;
   ema: number | null;
   rsi: number | null;
+  macd: number | null;
   period: number;
   source: string;
   timestamp: string;

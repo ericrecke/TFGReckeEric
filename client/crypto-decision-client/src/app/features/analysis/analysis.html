@@ -87,7 +87,7 @@
           </div>
 
           <div class="row g-3">
-            <div class="col-6 col-lg-3">
+            <div class="col-6 col-lg">
               <div class="indicator-tile rounded-3 p-3 text-center">
                 <span>RSI</span>
                 <strong>{{ selectedIndicator?.rsi ?? 'N/D' }}</strong>
@@ -95,7 +95,7 @@
               </div>
             </div>
 
-            <div class="col-6 col-lg-3">
+            <div class="col-6 col-lg">
               <div class="indicator-tile rounded-3 p-3 text-center">
                 <span>SMA</span>
                 <strong>{{ selectedIndicator?.sma ?? 'N/D' }}</strong>
@@ -103,7 +103,7 @@
               </div>
             </div>
 
-            <div class="col-6 col-lg-3">
+            <div class="col-6 col-lg">
               <div class="indicator-tile rounded-3 p-3 text-center">
                 <span>EMA</span>
                 <strong>{{ selectedIndicator?.ema ?? 'N/D' }}</strong>
@@ -111,7 +111,15 @@
               </div>
             </div>
 
-            <div class="col-6 col-lg-3">
+            <div class="col-6 col-lg">
+              <div class="indicator-tile rounded-3 p-3 text-center">
+                <span>MACD</span>
+                <strong>{{ selectedIndicator?.macd ?? 'N/D' }}</strong>
+                <small class="positive-text">Impulso</small>
+              </div>
+            </div>
+
+            <div class="col-6 col-lg">
               <div class="indicator-tile rounded-3 p-3 text-center">
                 <span>Volumen 24h</span>
                 <strong>{{ selectedMarketData?.volume | number:'1.0-2' }}</strong>
@@ -180,6 +188,10 @@
         <div>
           <span class="text-secondary small">Motivo</span>
           <p class="mb-0 text-light">{{ getRecommendationReason() }}</p>
+          <small class="d-block text-secondary mt-2" *ngIf="recommendation?.machineLearning as ml">
+            Modelo {{ ml.model }}: {{ ml.predictedResult }} ({{ ml.confidencePercent }}%),
+            entrenado con {{ ml.trainingSamples }} muestras.
+          </small>
         </div>
       </div>
 

@@ -177,6 +177,11 @@
             </div>
 
             <div class="insight-row">
+              <span>MACD</span>
+              <strong>{{ getSelectedIndicator()?.macd ?? 'Calculando' }}</strong>
+            </div>
+
+            <div class="insight-row">
               <span>Volumen 24h</span>
               <strong>{{ getSelectedMarketData()?.volume | number:'1.0-2' }}</strong>
             </div>

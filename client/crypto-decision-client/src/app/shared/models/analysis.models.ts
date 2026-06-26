@@ -19,6 +19,17 @@ export interface Recommendation {
   confidencePercent: number;
   riskLevel: 'Bajo' | 'Medio' | 'Alto';
   reason: string;
+  machineLearning?: {
+    predictedResult: 'COMPRAR' | 'ESPERAR' | 'VENDER';
+    confidencePercent: number;
+    probabilities: {
+      sell: number;
+      hold: number;
+      buy: number;
+    };
+    model: string;
+    trainingSamples: number;
+  } | null;
   disclaimer?: string;
   createdAt?: string;
   updatedAt?: string;

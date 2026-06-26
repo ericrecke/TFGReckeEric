@@ -308,7 +308,8 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
       indicator &&
       indicator.sma !== null &&
       indicator.ema !== null &&
-      indicator.rsi !== null
+      indicator.rsi !== null &&
+      indicator.macd !== null
     );
   }
 

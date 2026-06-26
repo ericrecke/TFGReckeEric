@@ -5,6 +5,7 @@ const MarketData = require('../models/MarketData');
 const Indicator = require('../models/Indicator');
 const marketService = require('../services/market.service');
 const indicatorService = require('../services/indicator.service');
+const predictionService = require('../services/prediction.service');
 
 const getRiskLevel = (maxRiskPercent) => {
     if (maxRiskPercent <= 1) {
@@ -107,6 +108,54 @@ const getRecommendation = ({
             : change < 0
                 ? 'La variacion reciente es negativa. La recomendacion favorece proteger capital o evitar compra.'
                 : 'No hay suficiente confirmacion direccional. Se recomienda observar antes de operar.'
+    };
+};
+
+const combineWithPrediction = (recommendation, prediction) => {
+    if (!prediction) {
+        return {
+            ...recommendation,
+            machineLearning: null
+        };
+    }
+
+    const modelSummary =
+        `TensorFlow.js proyecto ${prediction.predictedResult.toLowerCase()} ` +
+        `con ${prediction.confidencePercent}% de confianza.`;
+    const isDirectionalConflict =
+        recommendation.result !== 'ESPERAR' &&
+        prediction.predictedResult !== 'ESPERAR' &&
+        recommendation.result !== prediction.predictedResult;
+    const isStrongHold =
+        recommendation.result !== 'ESPERAR' &&
+        prediction.predictedResult === 'ESPERAR' &&
+        prediction.confidencePercent >= 55;
+
+    if (isDirectionalConflict || isStrongHold) {
+        return {
+            result: 'ESPERAR',
+            confidencePercent: Math.max(50, prediction.confidencePercent),
+            riskLevel: recommendation.riskLevel,
+            reason: `${recommendation.reason} ${modelSummary} Al no existir consenso, se prioriza esperar.`,
+            machineLearning: prediction
+        };
+    }
+
+    if (recommendation.result === prediction.predictedResult) {
+        return {
+            ...recommendation,
+            confidencePercent: Math.round(
+                (recommendation.confidencePercent + prediction.confidencePercent) / 2
+            ),
+            reason: `${recommendation.reason} ${modelSummary} Ambos metodos coinciden.`,
+            machineLearning: prediction
+        };
+    }
+
+    return {
+        ...recommendation,
+        reason: `${recommendation.reason} ${modelSummary} La prediccion se usa como apoyo y no reemplaza las reglas de riesgo.`,
+        machineLearning: prediction
     };
 };
 
@@ -245,9 +294,17 @@ const generateAnalysis = async (req, res) => {
         }
 
         const normalizedSymbol = String(symbol).toUpperCase();
-        const ticker = await marketService.getTicker24h(normalizedSymbol);
+        const [ticker, candles] = await Promise.all([
+            marketService.getTicker24h(normalizedSymbol),
+            marketService.getCandles(normalizedSymbol, timeframe, 1000)
+        ]);
         const marketData = await MarketData.create(ticker);
-        const indicator = await indicatorService.calculateAndSaveIndicators(marketData);
+        const closingPrices = candles.map((candle) => candle.close);
+        const indicator = await indicatorService.calculateAndSaveIndicators(
+            marketData,
+            14,
+            closingPrices
+        );
 
         const riskParameters = {
             capitalAmount: capital,
@@ -257,7 +314,7 @@ const generateAnalysis = async (req, res) => {
             takeProfitPercent
         };
 
-        const recommendation = getRecommendation({
+        const ruleRecommendation = getRecommendation({
             marketData,
             indicator,
             strategy,
@@ -265,6 +322,19 @@ const generateAnalysis = async (req, res) => {
             stopLossPercent,
             takeProfitPercent
         });
+        let prediction = null;
+
+        try {
+            prediction = await predictionService.predictMarketDirection({
+                symbol: normalizedSymbol,
+                timeframe,
+                candles
+            });
+        } catch (predictionError) {
+            console.error('TensorFlow prediction failed:', predictionError);
+        }
+
+        const recommendation = combineWithPrediction(ruleRecommendation, prediction);
 
         const analysis = await Analysis.create({
             user: req.user._id,
