@@ -13,7 +13,9 @@ export interface RiskParametersRequest {
 export interface Recommendation {
   _id?: string;
   symbol?: string;
+  recommendationType?: 'COMPRAR' | 'ESPERAR' | 'VENDER' | 'OBSERVAR';
   result: 'COMPRAR' | 'ESPERAR' | 'VENDER';
+  confidence?: number;
   confidencePercent: number;
   riskLevel: 'Bajo' | 'Medio' | 'Alto';
   reason: string;
@@ -44,4 +46,10 @@ export interface GenerateAnalysisResponse {
   marketData: MarketData;
   indicator?: TechnicalIndicator;
   recommendation: Recommendation;
+}
+
+export interface RecommendationsResponse {
+  message: string;
+  count: number;
+  data: Recommendation[];
 }

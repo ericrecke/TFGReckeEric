@@ -67,6 +67,17 @@ const calculateRsi = (prices, period) => {
     return 100 - (100 / (1 + relativeStrength));
 };
 
+const calculateMacd = (prices) => {
+    const shortEma = calculateEma(prices, 12);
+    const longEma = calculateEma(prices, 26);
+
+    if (shortEma === null || longEma === null) {
+        return null;
+    }
+
+    return shortEma - longEma;
+};
+
 const calculateAndSaveIndicators = async (marketData, period = DEFAULT_PERIOD) => {
     const symbol = String(marketData.symbol).toUpperCase();
     const history = await MarketData.find({ symbol })
@@ -81,7 +92,9 @@ const calculateAndSaveIndicators = async (marketData, period = DEFAULT_PERIOD) =
         sma: roundIndicator(calculateSma(prices, period)),
         ema: roundIndicator(calculateEma(prices, period)),
         rsi: roundIndicator(calculateRsi(prices, period)),
-        period,
+        macd: roundIndicator(calculateMacd(prices)),
+        movingAverage: roundIndicator(calculateSma(prices, period)),
+        period: String(period),
         timestamp: marketData.timestamp
     });
 

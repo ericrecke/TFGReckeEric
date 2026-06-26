@@ -1,0 +1,206 @@
+<div class="recommendations-shell d-grid min-vh-100">
+  <aside class="sidebar d-flex flex-column gap-4 p-3">
+    <div class="d-flex align-items-center gap-2">
+      <div class="brand-mark">DS</div>
+      <div>
+        <strong class="d-block text-white">DSS Trading</strong>
+        <span class="text-secondary small">Soporte a decisiones</span>
+      </div>
+    </div>
+
+    <nav class="nav nav-pills flex-column gap-2" aria-label="Navegacion principal">
+      <a class="nav-link" routerLink="/dashboard">Dashboard</a>
+      <a class="nav-link" routerLink="/analysis">Analisis</a>
+      <a class="nav-link active">Recomendaciones</a>
+      <a class="nav-link" routerLink="/operations">Operaciones</a>
+      <a class="nav-link">Historial</a>
+      <a class="nav-link">Configuracion</a>
+    </nav>
+
+    <div class="sidebar-user d-flex align-items-center gap-2 mt-auto pt-3">
+      <div class="user-avatar">{{ user?.name?.charAt(0) || 'U' }}</div>
+      <div class="min-w-0">
+        <strong class="d-block text-white">{{ user?.name || 'Usuario' }}</strong>
+        <span class="d-block text-secondary small text-truncate">{{ user?.email }}</span>
+      </div>
+    </div>
+  </aside>
+
+  <main class="recommendations-page p-4">
+    <header class="d-flex align-items-center justify-content-between gap-3 mb-4 flex-wrap">
+      <div>
+        <h1 class="h3 text-white mb-1">Recomendaciones de trading</h1>
+        <p class="text-secondary mb-0">Panel decisional con recomendaciones generadas a partir del analisis.</p>
+      </div>
+
+      <div class="d-flex gap-2 flex-wrap">
+        <button class="btn btn-primary fw-bold" type="button" (click)="goToAnalysis(selectedSymbol)">
+          Generar nueva
+        </button>
+        <button class="btn btn-danger fw-bold" type="button" (click)="logout()">Cerrar sesion</button>
+      </div>
+    </header>
+
+    <div class="alert alert-danger" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+    <section class="row g-3 mb-3">
+      <article class="col-12 col-md-3">
+        <div class="recommendation-card rounded-3 p-3 h-100">
+          <span class="metric-label">Total evaluadas</span>
+          <strong class="metric-value">{{ recommendations.length }}</strong>
+          <small class="metric-label">Segun filtros actuales</small>
+        </div>
+      </article>
+
+      <article class="col-12 col-md-3">
+        <div class="recommendation-card rounded-3 p-3 h-100">
+          <span class="metric-label">Comprar</span>
+          <strong class="metric-value positive-text">{{ getTotalByType('COMPRAR') }}</strong>
+          <small class="metric-label">Oportunidades alcistas</small>
+        </div>
+      </article>
+
+      <article class="col-12 col-md-3">
+        <div class="recommendation-card rounded-3 p-3 h-100">
+          <span class="metric-label">Vender</span>
+          <strong class="metric-value negative-text">{{ getTotalByType('VENDER') }}</strong>
+          <small class="metric-label">Senales defensivas</small>
+        </div>
+      </article>
+
+      <article class="col-12 col-md-3">
+        <div class="recommendation-card rounded-3 p-3 h-100">
+          <span class="metric-label">Confianza prom.</span>
+          <strong class="metric-value warning-text">{{ getAverageConfidence() }}%</strong>
+          <small class="metric-label">Nivel estimado del sistema</small>
+        </div>
+      </article>
+    </section>
+
+    <section class="recommendation-card rounded-3 p-3 mb-3">
+      <div class="row g-3 align-items-end">
+        <div class="col-12 col-md-4">
+          <label class="form-label text-secondary">Activo</label>
+          <select class="form-select form-select-dark" [(ngModel)]="selectedSymbol">
+            <option value="">Todos</option>
+            <option *ngFor="let symbol of symbols" [value]="symbol">{{ symbol }}</option>
+          </select>
+        </div>
+
+        <div class="col-12 col-md-4">
+          <label class="form-label text-secondary">Resultado</label>
+          <select class="form-select form-select-dark" [(ngModel)]="selectedType">
+            <option value="">Todos</option>
+            <option value="COMPRAR">Comprar</option>
+            <option value="VENDER">Vender</option>
+            <option value="ESPERAR">Esperar</option>
+            <option value="OBSERVAR">Observar</option>
+          </select>
+        </div>
+
+        <div class="col-12 col-md-4 d-flex gap-2">
+          <button class="btn btn-primary fw-bold flex-fill" type="button" (click)="loadRecommendations()" [disabled]="loading">
+            {{ loading ? 'Cargando...' : 'Aplicar filtros' }}
+          </button>
+          <button class="btn btn-outline-secondary fw-bold" type="button" (click)="clearFilters()">Limpiar</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="row g-3">
+      <article class="col-12 col-xl-5">
+        <div class="recommendation-card rounded-3 p-3 h-100">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="h6 text-white mb-0">Recomendaciones generadas</h2>
+            <span class="text-secondary small">{{ recommendations.length }} resultados</span>
+          </div>
+
+          <div class="empty-state" *ngIf="!loading && !recommendations.length">
+            No hay recomendaciones guardadas para estos filtros. Genere una desde Analisis.
+          </div>
+
+          <div class="recommendation-list d-grid gap-2" *ngIf="recommendations.length">
+            <button
+              class="recommendation-row rounded-3 p-3 text-start"
+              type="button"
+              *ngFor="let recommendation of recommendations"
+              [class.selected]="selectedRecommendation?._id === recommendation._id"
+              (click)="selectRecommendation(recommendation)"
+            >
+              <div class="d-flex justify-content-between gap-3">
+                <div>
+                  <strong class="text-white">{{ recommendation.symbol }}</strong>
+                  <small class="d-block text-secondary">{{ recommendation.createdAt | date:'short' }}</small>
+                </div>
+
+                <div class="text-end">
+                  <span class="recommendation-type" [class]="getRecommendationClass(recommendation)">
+                    {{ getRecommendationResult(recommendation) }}
+                  </span>
+                  <small class="d-block text-secondary">{{ getConfidencePercent(recommendation) | number:'1.0-0' }}%</small>
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
+      </article>
+
+      <article class="col-12 col-xl-7">
+        <div class="recommendation-card result-panel rounded-3 p-3 h-100">
+          <ng-container *ngIf="selectedRecommendation; else noSelection">
+            <div class="recommendation-layout">
+              <div class="recommendation-icon">!</div>
+
+              <div>
+                <span class="text-secondary small">Decision orientativa</span>
+                <h2 class="recommendation-title mb-1" [class]="getRecommendationClass(selectedRecommendation)">
+                  {{ getRecommendationResult(selectedRecommendation) }}
+                </h2>
+                <span class="text-secondary small">Nivel de confianza</span>
+                <div class="progress confidence-bar mt-1">
+                  <div class="progress-bar bg-success" [style.width.%]="getConfidencePercent(selectedRecommendation)">
+                    {{ getConfidencePercent(selectedRecommendation) | number:'1.0-0' }}%
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <span class="text-secondary small">Riesgo estimado</span>
+                <strong class="d-block warning-text">{{ selectedRecommendation.riskLevel }}</strong>
+              </div>
+
+              <div>
+                <span class="text-secondary small">Activo</span>
+                <strong class="d-block text-white">{{ selectedRecommendation.symbol }}</strong>
+                <small class="text-secondary">{{ selectedRecommendation.createdAt | date:'medium' }}</small>
+              </div>
+            </div>
+
+            <div class="mt-3">
+              <span class="text-secondary small">Motivo</span>
+              <p class="text-light mb-0">{{ selectedRecommendation.reason }}</p>
+            </div>
+
+            <div class="d-flex gap-2 mt-3 flex-wrap">
+              <button class="btn btn-primary fw-bold" type="button">Registrar operacion</button>
+              <button class="btn btn-outline-primary fw-bold" type="button">Crear alerta</button>
+              <button class="btn btn-outline-secondary fw-bold" type="button" (click)="goToAnalysis(selectedRecommendation.symbol)">
+                Revisar analisis
+              </button>
+            </div>
+
+            <p class="disclaimer rounded-3 mt-3 mb-0">
+              {{ selectedRecommendation.disclaimer || 'La recomendacion es orientativa. La decision final corresponde al usuario.' }}
+            </p>
+          </ng-container>
+
+          <ng-template #noSelection>
+            <div class="empty-state">
+              Seleccione una recomendacion para revisar la decision, el riesgo, la confianza y el motivo.
+            </div>
+          </ng-template>
+        </div>
+      </article>
+    </section>
+  </main>
+</div>

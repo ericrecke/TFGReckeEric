@@ -31,6 +31,7 @@ const getTicker24h = async (symbol) => {
     return {
         symbol: response.data.symbol,
         price: parseFloat(response.data.lastPrice),
+        changePercent: parseFloat(response.data.priceChangePercent),
         priceChangePercent: parseFloat(response.data.priceChangePercent),
         volume: parseFloat(response.data.volume),
         quoteVolume: parseFloat(response.data.quoteVolume),

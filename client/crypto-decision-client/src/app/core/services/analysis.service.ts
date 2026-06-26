@@ -19,6 +19,10 @@ export class AnalysisService {
     return this.http.post<GenerateAnalysisResponse>(`${this.apiUrl}/generate`, data);
   }
 
+  getRiskParameters(symbol: string): Observable<RiskParametersResponse> {
+    return this.http.get<RiskParametersResponse>(`${this.apiUrl}/risk-parameters/${symbol}`);
+  }
+
   saveRiskParameters(data: RiskParametersRequest): Observable<RiskParametersResponse> {
     return this.http.post<RiskParametersResponse>(`${this.apiUrl}/risk-parameters`, data);
   }

@@ -1,0 +1,164 @@
+.recommendations-shell {
+  grid-template-columns: 240px 1fr;
+  background: #07111f;
+  color: #e5eefc;
+}
+
+.sidebar {
+  background: linear-gradient(180deg, #081426 0%, #06101e 100%);
+  border-right: 1px solid #172337;
+}
+
+.brand-mark,
+.user-avatar {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #0d6efd;
+  color: #ffffff;
+  font-weight: 800;
+  flex: 0 0 auto;
+}
+
+.sidebar-user {
+  border-top: 1px solid #172337;
+}
+
+.nav-link {
+  color: #aeb9cc;
+  cursor: pointer;
+}
+
+.nav-link:hover,
+.nav-link.active {
+  color: #ffffff;
+}
+
+.recommendations-page {
+  min-width: 0;
+}
+
+.recommendation-card,
+.recommendation-row {
+  background: #0d1b2d;
+  border: 1px solid #1c2c42;
+}
+
+.recommendation-row {
+  color: inherit;
+  transition: border-color 140ms ease, transform 140ms ease;
+}
+
+.recommendation-row:hover,
+.recommendation-row.selected {
+  border-color: #22c55e;
+  transform: translateY(-1px);
+}
+
+.form-select-dark {
+  background-color: #081426;
+  border-color: #1c2c42;
+  color: #e5eefc;
+}
+
+.metric-label {
+  color: #8b98ad;
+  display: block;
+  font-size: 12px;
+}
+
+.metric-value {
+  color: #ffffff;
+  display: block;
+  font-size: 28px;
+  line-height: 1.2;
+  margin: 8px 0 6px;
+}
+
+.recommendation-title {
+  font-size: 34px;
+  font-weight: 800;
+}
+
+.recommendation-layout {
+  align-items: center;
+  display: grid;
+  grid-template-columns: auto minmax(180px, 1fr) 150px minmax(220px, 1.3fr);
+  gap: 18px;
+}
+
+.recommendation-icon {
+  width: 64px;
+  height: 64px;
+  background: #facc15;
+  border-radius: 50%;
+  color: #07111f;
+  display: grid;
+  font-size: 30px;
+  font-weight: 900;
+  place-items: center;
+}
+
+.recommendation-type {
+  display: block;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.confidence-bar {
+  background: #e5eefc;
+  height: 14px;
+  min-width: 180px;
+}
+
+.result-panel {
+  min-height: 245px;
+}
+
+.disclaimer,
+.empty-state {
+  background: #081426;
+  border: 1px solid #1c2c42;
+  color: #8b98ad;
+  font-size: 13px;
+  padding: 12px;
+}
+
+.positive-text {
+  color: #22c55e !important;
+}
+
+.negative-text {
+  color: #ef4444 !important;
+}
+
+.warning-text {
+  color: #facc15 !important;
+}
+
+@media (max-width: 1020px) {
+  .recommendations-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar .nav {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .recommendation-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .recommendations-page {
+    padding: 18px !important;
+  }
+
+  .sidebar .nav {
+    grid-template-columns: 1fr;
+  }
+}

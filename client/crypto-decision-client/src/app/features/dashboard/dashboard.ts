@@ -220,6 +220,12 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     this.loadPriceChart(symbol);
   }
 
+  openAnalysis(symbol = this.selectedChartSymbol): void {
+    this.router.navigate(['/analysis'], {
+      queryParams: symbol ? { symbol } : undefined
+    });
+  }
+
   getSelectedMarketData(): MarketData | undefined {
     return this.marketData.find((item) => item.symbol === this.selectedChartSymbol);
   }

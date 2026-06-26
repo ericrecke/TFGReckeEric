@@ -11,8 +11,8 @@
     <nav class="nav nav-pills flex-column gap-2" aria-label="Navegacion principal">
       <a class="nav-link" routerLink="/dashboard">Dashboard</a>
       <a class="nav-link active">Analisis</a>
-      <a class="nav-link">Recomendaciones</a>
-      <a class="nav-link">Operaciones</a>
+      <a class="nav-link" routerLink="/recommendations">Recomendaciones</a>
+      <a class="nav-link" routerLink="/operations">Operaciones</a>
       <a class="nav-link">Historial</a>
       <a class="nav-link">Configuracion</a>
     </nav>
@@ -45,7 +45,7 @@
       <div class="row g-3">
         <div class="col-12 col-md-4">
           <label class="form-label text-secondary">Activo</label>
-          <select class="form-select form-select-dark" [(ngModel)]="selectedSymbol" (ngModelChange)="onAnalysisFilterChange()">
+          <select class="form-select form-select-dark" [(ngModel)]="selectedSymbol" (ngModelChange)="onSymbolChange()">
             <option *ngFor="let symbol of symbols" [value]="symbol">{{ symbol }}</option>
           </select>
         </div>

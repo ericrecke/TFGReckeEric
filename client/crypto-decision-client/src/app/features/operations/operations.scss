@@ -1,0 +1,142 @@
+.operations-shell {
+  grid-template-columns: 240px 1fr;
+  background: #07111f;
+  color: #e5eefc;
+}
+
+.sidebar {
+  background: linear-gradient(180deg, #081426 0%, #06101e 100%);
+  border-right: 1px solid #172337;
+}
+
+.brand-mark,
+.user-avatar {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #0d6efd;
+  color: #ffffff;
+  font-weight: 800;
+  flex: 0 0 auto;
+}
+
+.sidebar-user {
+  border-top: 1px solid #172337;
+}
+
+.nav-link {
+  color: #aeb9cc;
+  cursor: pointer;
+}
+
+.nav-link:hover,
+.nav-link.active {
+  color: #ffffff;
+}
+
+.operations-page {
+  min-width: 0;
+}
+
+.operation-card {
+  background: #0d1b2d;
+  border: 1px solid #1c2c42;
+}
+
+.metric-label {
+  color: #8b98ad;
+  display: block;
+  font-size: 12px;
+}
+
+.metric-value {
+  color: #ffffff;
+  display: block;
+  font-size: 28px;
+  line-height: 1.2;
+  margin: 8px 0 6px;
+}
+
+.form-select-dark,
+.form-control-dark {
+  background-color: #081426;
+  border-color: #1c2c42;
+  color: #e5eefc;
+}
+
+.operation-title {
+  font-size: 34px;
+  font-weight: 800;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.detail-grid div,
+.close-box,
+.empty-state {
+  background: #081426;
+  border: 1px solid #1c2c42;
+}
+
+.detail-grid div {
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.detail-grid span {
+  color: #8b98ad;
+  display: block;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.detail-grid strong {
+  color: #ffffff;
+  font-size: 14px;
+}
+
+.empty-state {
+  color: #8b98ad;
+  font-size: 13px;
+  padding: 12px;
+}
+
+.selected-row td {
+  background: rgba(34, 197, 94, 0.12);
+}
+
+.positive-text {
+  color: #22c55e !important;
+}
+
+.negative-text {
+  color: #ef4444 !important;
+}
+
+@media (max-width: 1020px) {
+  .operations-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar .nav {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .operations-page {
+    padding: 18px !important;
+  }
+
+  .sidebar .nav,
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+}

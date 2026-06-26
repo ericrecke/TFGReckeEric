@@ -11,7 +11,9 @@ const indicatorSchema = new mongoose.Schema(
         sma: { type: Number, default: null },
         ema: { type: Number, default: null },
         rsi: { type: Number, default: null },
-        period: { type: Number, default: 14 },
+        macd: { type: Number, default: null },
+        movingAverage: { type: Number, default: null },
+        period: { type: String, default: '14' },
         source: { type: String, default: 'internal-calculation' },
         timestamp: { type: Date, default: Date.now }
     },
@@ -20,4 +22,4 @@ const indicatorSchema = new mongoose.Schema(
     }
 );
 
-module.exports = mongoose.model('Indicator', indicatorSchema);
+module.exports = mongoose.model('Indicator', indicatorSchema, 'indicators');

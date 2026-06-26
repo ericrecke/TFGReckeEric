@@ -3,6 +3,8 @@ import { LoginComponent } from './features/auth/login/login';
 import { RegisterComponent } from './features/auth/register/register';
 import { DashboardComponent } from './features/dashboard/dashboard';
 import { AnalysisComponent } from './features/analysis/analysis';
+import { RecommendationsComponent } from './features/recommendations/recommendations';
+import { OperationsComponent } from './features/operations/operations';
 import { authGuard } from './core/guards/auth-guard';
 export const routes: Routes = [
     {
@@ -26,6 +28,16 @@ export const routes: Routes = [
     {
         path: 'analysis',
         component: AnalysisComponent,
+        canActivate: [authGuard]
+    },
+    {
+        path: 'recommendations',
+        component: RecommendationsComponent,
+        canActivate: [authGuard]
+    },
+    {
+        path: 'operations',
+        component: OperationsComponent,
         canActivate: [authGuard]
     },
     {

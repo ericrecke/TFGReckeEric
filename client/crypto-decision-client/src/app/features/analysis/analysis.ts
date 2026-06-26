@@ -1,7 +1,7 @@
 import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { finalize, Subject, takeUntil } from 'rxjs';
 import type { Chart as ChartType } from 'chart.js';
 
@@ -51,6 +51,7 @@ export class AnalysisComponent implements OnInit, AfterViewInit, OnDestroy {
     private authService: AuthService,
     private marketService: MarketService,
     private analysisService: AnalysisService,
+    private activatedRoute: ActivatedRoute,
     private router: Router,
     private changeDetectorRef: ChangeDetectorRef
   ) {
@@ -80,8 +81,11 @@ export class AnalysisComponent implements OnInit, AfterViewInit, OnDestroy {
     ).subscribe({
       next: (response) => {
         this.symbols = response.symbols ?? [];
-        this.selectedSymbol = this.symbols[0] ?? '';
-        this.generateAnalysis();
+        const requestedSymbol = this.activatedRoute.snapshot.queryParamMap.get('symbol')?.toUpperCase();
+        this.selectedSymbol = requestedSymbol && this.symbols.includes(requestedSymbol)
+          ? requestedSymbol
+          : this.symbols[0] ?? '';
+        this.loadRiskParameters(this.selectedSymbol);
         this.changeDetectorRef.detectChanges();
       },
       error: (error) => {
@@ -149,6 +153,13 @@ export class AnalysisComponent implements OnInit, AfterViewInit, OnDestroy {
     this.selectedIndicator = null;
     this.recommendation = null;
     this.generateAnalysis();
+  }
+
+  onSymbolChange(): void {
+    this.selectedMarketData = null;
+    this.selectedIndicator = null;
+    this.recommendation = null;
+    this.loadRiskParameters(this.selectedSymbol);
   }
 
   logout(): void {
@@ -228,6 +239,36 @@ export class AnalysisComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     return Math.max(20, Math.min(95, Math.round(confidence)));
+  }
+
+  private loadRiskParameters(symbol: string): void {
+    if (!symbol) {
+      return;
+    }
+
+    this.loading = true;
+    this.errorMessage = '';
+
+    this.analysisService.getRiskParameters(symbol).pipe(
+      finalize(() => {
+        this.loading = false;
+        this.changeDetectorRef.detectChanges();
+      }),
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (response) => {
+        this.selectedTimeframe = response.data.timeframe;
+        this.selectedStrategy = response.data.strategy as Strategy;
+        this.capital = response.data.capital;
+        this.maxRiskPercent = response.data.maxRiskPercent;
+        this.stopLossPercent = response.data.stopLossPercent;
+        this.takeProfitPercent = response.data.takeProfitPercent;
+        this.generateAnalysis();
+      },
+      error: (error) => {
+        this.errorMessage = error.error?.message || 'No se pudieron cargar los parametros de riesgo.';
+      }
+    });
   }
 
   private loadHistoryChart(symbol: string): void {

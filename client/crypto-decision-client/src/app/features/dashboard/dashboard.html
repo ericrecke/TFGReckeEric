@@ -11,8 +11,8 @@
     <nav class="nav nav-pills flex-column gap-2" aria-label="Navegacion principal">
       <a class="nav-link active" routerLink="/dashboard">Dashboard</a>
       <a class="nav-link" routerLink="/analysis">Analisis</a>
-      <a class="nav-link">Recomendaciones</a>
-      <a class="nav-link">Operaciones</a>
+      <a class="nav-link" routerLink="/recommendations">Recomendaciones</a>
+      <a class="nav-link" routerLink="/operations">Operaciones</a>
       <a class="nav-link">Historial</a>
       <a class="nav-link">Configuracion</a>
     </nav>
@@ -149,7 +149,7 @@
             <canvas #priceChart></canvas>
           </div>
 
-          <button class="btn btn-primary d-block mx-auto mt-3 px-5 fw-bold" type="button">
+          <button class="btn btn-primary d-block mx-auto mt-3 px-5 fw-bold" type="button" (click)="openAnalysis()">
             Analizar activo
           </button>
         </div>
@@ -265,7 +265,7 @@
               </td>
               <td>{{ item.volume | number:'1.0-2' }}</td>
               <td>
-                <button type="button" class="btn btn-sm btn-primary fw-bold" (click)="selectSymbol(item.symbol)">
+                <button type="button" class="btn btn-sm btn-primary fw-bold" (click)="openAnalysis(item.symbol)">
                   Analizar
                 </button>
               </td>

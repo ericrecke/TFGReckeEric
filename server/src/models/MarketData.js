@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const marketDataSchema = new mongoose.Schema({
     symbol: { type: String, required: true, uppercase: true },
     price: { type: Number, required: true },
+    changePercent: { type: Number, default: 0 },
     priceChangePercent: { type: Number, default: 0 },
     volume: { type: Number, default: 0 },
     quoteVolume: { type: Number, default: 0 },
@@ -16,4 +17,4 @@ const marketDataSchema = new mongoose.Schema({
     }
 );
 
-module.exports = mongoose.model('MarketData', marketDataSchema);
+module.exports = mongoose.model('MarketData', marketDataSchema, 'market_data');

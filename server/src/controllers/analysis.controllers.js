@@ -122,6 +122,47 @@ const validateRiskParameters = ({ capital, maxRiskPercent, stopLossPercent, take
     return null;
 };
 
+const getRiskParameters = async (req, res) => {
+    try {
+        const { symbol } = req.params;
+
+        if (!symbol) {
+            return res.status(400).json({ message: 'Symbol is required' });
+        }
+
+        const normalizedSymbol = String(symbol).toUpperCase();
+        const parameters = await RiskParameters.findOne({
+            user: req.user._id,
+            symbol: normalizedSymbol
+        });
+
+        if (parameters) {
+            return res.json({
+                message: 'Risk parameters fetched successfully',
+                data: parameters
+            });
+        }
+
+        return res.json({
+            message: 'Default risk parameters returned',
+            data: {
+                symbol: normalizedSymbol,
+                timeframe: '1H',
+                strategy: 'trend',
+                capital: 1000,
+                maxRiskPercent: 2,
+                stopLossPercent: 3,
+                takeProfitPercent: 6
+            }
+        });
+    } catch (error) {
+        return res.status(500).json({
+            message: 'Error fetching risk parameters',
+            error: error.message
+        });
+    }
+};
+
 const saveRiskParameters = async (req, res) => {
     try {
         const {
@@ -146,14 +187,17 @@ const saveRiskParameters = async (req, res) => {
 
         const parameters = await RiskParameters.findOneAndUpdate(
             {
+                userId: req.user._id,
                 user: req.user._id,
                 symbol: String(symbol).toUpperCase()
             },
             {
+                userId: req.user._id,
                 user: req.user._id,
                 symbol: String(symbol).toUpperCase(),
                 timeframe,
                 strategy,
+                capitalAmount: capital,
                 capital,
                 maxRiskPercent,
                 stopLossPercent,
@@ -206,6 +250,7 @@ const generateAnalysis = async (req, res) => {
         const indicator = await indicatorService.calculateAndSaveIndicators(marketData);
 
         const riskParameters = {
+            capitalAmount: capital,
             capital,
             maxRiskPercent,
             stopLossPercent,
@@ -233,9 +278,12 @@ const generateAnalysis = async (req, res) => {
         });
 
         const recommendationRecord = await Recommendation.create({
+            userId: req.user._id,
             user: req.user._id,
             analysis: analysis._id,
             symbol: normalizedSymbol,
+            recommendationType: recommendation.result,
+            confidence: recommendation.confidencePercent,
             ...recommendation
         });
 
@@ -258,6 +306,7 @@ const generateAnalysis = async (req, res) => {
 };
 
 module.exports = {
+    getRiskParameters,
     saveRiskParameters,
     generateAnalysis
 };
