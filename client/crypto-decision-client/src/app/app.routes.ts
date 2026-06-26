@@ -5,6 +5,7 @@ import { DashboardComponent } from './features/dashboard/dashboard';
 import { AnalysisComponent } from './features/analysis/analysis';
 import { RecommendationsComponent } from './features/recommendations/recommendations';
 import { OperationsComponent } from './features/operations/operations';
+import { HistoryComponent } from './features/history/history';
 import { authGuard } from './core/guards/auth-guard';
 export const routes: Routes = [
     {
@@ -38,6 +39,11 @@ export const routes: Routes = [
     {
         path: 'operations',
         component: OperationsComponent,
+        canActivate: [authGuard]
+    },
+    {
+        path: 'history',
+        component: HistoryComponent,
         canActivate: [authGuard]
     },
     {

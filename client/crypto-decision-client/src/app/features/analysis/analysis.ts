@@ -167,6 +167,23 @@ export class AnalysisComponent implements OnInit, AfterViewInit, OnDestroy {
     this.router.navigate(['/login']);
   }
 
+  registerOperation(): void {
+    const recommendationResult = this.getRecommendationResult();
+    const operationType = recommendationResult === 'VENDER' ? 'venta' : 'compra';
+    const entryPrice = this.selectedMarketData?.price ?? 0;
+    const riskAmount = Number(this.capital) * (Number(this.maxRiskPercent) / 100);
+    const amount = entryPrice > 0 ? riskAmount / entryPrice : 0;
+
+    this.router.navigate(['/operations'], {
+      queryParams: {
+        symbol: this.selectedSymbol,
+        operationType,
+        entryPrice: entryPrice || null,
+        amount: amount || null
+      }
+    });
+  }
+
   getRecommendationResult(): string {
     if (this.recommendation) {
       return this.recommendation.result;

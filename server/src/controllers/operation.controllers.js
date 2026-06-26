@@ -39,7 +39,7 @@ const enrichOperation = async (operation) => {
 
 const getOperations = async (req, res) => {
     try {
-        const { status, symbol } = req.query;
+        const { status, symbol, dateFrom, dateTo } = req.query;
         const filters = {
             userId: req.user._id
         };
@@ -50,6 +50,20 @@ const getOperations = async (req, res) => {
 
         if (symbol) {
             filters.symbol = String(symbol).toUpperCase();
+        }
+
+        if (dateFrom || dateTo) {
+            filters.createdAt = {};
+
+            if (dateFrom) {
+                filters.createdAt.$gte = new Date(dateFrom);
+            }
+
+            if (dateTo) {
+                const endDate = new Date(dateTo);
+                endDate.setHours(23, 59, 59, 999);
+                filters.createdAt.$lte = endDate;
+            }
         }
 
         const operations = await Operation.find(filters).sort({ createdAt: -1 });

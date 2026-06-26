@@ -17,7 +17,7 @@ export class OperationService {
 
   constructor(private http: HttpClient) {}
 
-  getOperations(filters?: { status?: string; symbol?: string }): Observable<OperationsResponse> {
+  getOperations(filters?: { status?: string; symbol?: string; dateFrom?: string; dateTo?: string }): Observable<OperationsResponse> {
     let params = new HttpParams();
 
     if (filters?.status) {
@@ -26,6 +26,14 @@ export class OperationService {
 
     if (filters?.symbol) {
       params = params.set('symbol', filters.symbol);
+    }
+
+    if (filters?.dateFrom) {
+      params = params.set('dateFrom', filters.dateFrom);
+    }
+
+    if (filters?.dateTo) {
+      params = params.set('dateTo', filters.dateTo);
     }
 
     return this.http.get<OperationsResponse>(this.apiUrl, { params });

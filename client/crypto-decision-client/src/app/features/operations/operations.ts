@@ -1,7 +1,7 @@
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { AuthService } from '../../core/services/auth.service';
@@ -36,11 +36,13 @@ export class OperationsComponent implements OnInit {
   closing = false;
   errorMessage = '';
   successMessage = '';
+  private hasPrefilledForm = false;
 
   constructor(
     private authService: AuthService,
     private marketService: MarketService,
     private operationService: OperationService,
+    private activatedRoute: ActivatedRoute,
     private router: Router,
     private changeDetectorRef: ChangeDetectorRef
   ) {
@@ -48,6 +50,7 @@ export class OperationsComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.applyPrefillFromRoute();
     this.loadSymbols();
     this.loadOperations();
   }
@@ -56,7 +59,9 @@ export class OperationsComponent implements OnInit {
     this.marketService.getSymbols().subscribe({
       next: (response) => {
         this.symbols = response.symbols ?? [];
-        this.formSymbol = this.symbols[0] ?? '';
+        if (!this.hasPrefilledForm) {
+          this.formSymbol = this.symbols[0] ?? '';
+        }
         this.changeDetectorRef.detectChanges();
       },
       error: () => {
@@ -194,5 +199,34 @@ export class OperationsComponent implements OnInit {
 
   isPositive(value: number): boolean {
     return value >= 0;
+  }
+
+  private applyPrefillFromRoute(): void {
+    const params = this.activatedRoute.snapshot.queryParamMap;
+    const symbol = params.get('symbol')?.toUpperCase();
+    const operationType = params.get('operationType') as OperationType | null;
+    const entryPrice = Number(params.get('entryPrice') ?? 0);
+    const amount = Number(params.get('amount') ?? 0);
+
+    if (symbol) {
+      this.formSymbol = symbol;
+      this.selectedSymbol = symbol;
+      this.hasPrefilledForm = true;
+    }
+
+    if (operationType === 'compra' || operationType === 'venta') {
+      this.operationType = operationType;
+      this.hasPrefilledForm = true;
+    }
+
+    if (entryPrice > 0) {
+      this.entryPrice = Number(entryPrice.toFixed(8));
+      this.hasPrefilledForm = true;
+    }
+
+    if (amount > 0) {
+      this.amount = Number(amount.toFixed(8));
+      this.hasPrefilledForm = true;
+    }
   }
 }

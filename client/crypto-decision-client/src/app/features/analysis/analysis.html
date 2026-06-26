@@ -13,7 +13,7 @@
       <a class="nav-link active">Analisis</a>
       <a class="nav-link" routerLink="/recommendations">Recomendaciones</a>
       <a class="nav-link" routerLink="/operations">Operaciones</a>
-      <a class="nav-link">Historial</a>
+      <a class="nav-link" routerLink="/history">Historial</a>
       <a class="nav-link">Configuracion</a>
     </nav>
 
@@ -184,8 +184,10 @@
       </div>
 
       <div class="d-flex gap-2 mt-3 flex-wrap">
-        <button class="btn btn-primary fw-bold" type="button">Registrar operacion</button>
-        <button class="btn btn-outline-primary fw-bold" type="button">Crear alerta</button>
+        <button class="btn btn-primary fw-bold" type="button" (click)="registerOperation()" [disabled]="!selectedSymbol || !selectedMarketData">
+          Registrar operacion
+        </button>
+        <button class="btn btn-outline-primary fw-bold" type="button" disabled>Crear alerta</button>
       </div>
 
       <p class="disclaimer rounded-3 mt-3 mb-0">

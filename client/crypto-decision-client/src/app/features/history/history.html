@@ -1,0 +1,216 @@
+<div class="history-shell d-grid min-vh-100">
+  <aside class="sidebar d-flex flex-column gap-4 p-3">
+    <div class="d-flex align-items-center gap-2">
+      <div class="brand-mark">DS</div>
+      <div>
+        <strong class="d-block text-white">DSS Trading</strong>
+        <span class="text-secondary small">Soporte a decisiones</span>
+      </div>
+    </div>
+
+    <nav class="nav nav-pills flex-column gap-2" aria-label="Navegacion principal">
+      <a class="nav-link" routerLink="/dashboard">Dashboard</a>
+      <a class="nav-link" routerLink="/analysis">Analisis</a>
+      <a class="nav-link" routerLink="/recommendations">Recomendaciones</a>
+      <a class="nav-link" routerLink="/operations">Operaciones</a>
+      <a class="nav-link active">Historial</a>
+      <a class="nav-link">Configuracion</a>
+    </nav>
+
+    <div class="sidebar-user d-flex align-items-center gap-2 mt-auto pt-3">
+      <div class="user-avatar">{{ user?.name?.charAt(0) || 'U' }}</div>
+      <div class="min-w-0">
+        <strong class="d-block text-white">{{ user?.name || 'Usuario' }}</strong>
+        <span class="d-block text-secondary small text-truncate">{{ user?.email }}</span>
+      </div>
+    </div>
+  </aside>
+
+  <main class="history-page p-4">
+    <header class="d-flex align-items-center justify-content-between gap-3 mb-4 flex-wrap">
+      <div>
+        <h1 class="h3 text-white mb-1">Historial de operaciones</h1>
+        <p class="text-secondary mb-0">Consulta de operaciones anteriores, resultados y detalle por periodo.</p>
+      </div>
+
+      <button class="btn btn-danger fw-bold" type="button" (click)="logout()">Cerrar sesion</button>
+    </header>
+
+    <div class="alert alert-danger" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+    <section class="row g-3 mb-3">
+      <article class="col-12 col-md-3">
+        <div class="history-card rounded-3 p-3 h-100">
+          <span class="metric-label">Operaciones</span>
+          <strong class="metric-value">{{ operations.length }}</strong>
+          <small class="metric-label">Segun filtros aplicados</small>
+        </div>
+      </article>
+
+      <article class="col-12 col-md-3">
+        <div class="history-card rounded-3 p-3 h-100">
+          <span class="metric-label">Cerradas</span>
+          <strong class="metric-value">{{ getClosedCount() }}</strong>
+          <small class="metric-label">Con resultado definido</small>
+        </div>
+      </article>
+
+      <article class="col-12 col-md-3">
+        <div class="history-card rounded-3 p-3 h-100">
+          <span class="metric-label">Win rate</span>
+          <strong class="metric-value warning-text">{{ getWinRate() }}%</strong>
+          <small class="metric-label">Operaciones positivas</small>
+        </div>
+      </article>
+
+      <article class="col-12 col-md-3">
+        <div class="history-card rounded-3 p-3 h-100">
+          <span class="metric-label">Resultado</span>
+          <strong class="metric-value" [class.positive-text]="isPositive(getTotalResult())" [class.negative-text]="!isPositive(getTotalResult())">
+            {{ getTotalResult() | number:'1.2-2' }}
+          </strong>
+          <small class="metric-label">Resultado acumulado</small>
+        </div>
+      </article>
+    </section>
+
+    <section class="history-card rounded-3 p-3 mb-3">
+      <div class="row g-3 align-items-end">
+        <div class="col-12 col-md-3">
+          <label class="form-label text-secondary">Activo</label>
+          <select class="form-select form-select-dark" [(ngModel)]="selectedSymbol">
+            <option value="">Todos</option>
+            <option *ngFor="let symbol of symbols" [value]="symbol">{{ symbol }}</option>
+          </select>
+        </div>
+
+        <div class="col-12 col-md-2">
+          <label class="form-label text-secondary">Estado</label>
+          <select class="form-select form-select-dark" [(ngModel)]="selectedStatus">
+            <option value="">Todos</option>
+            <option value="cerrada">Cerrada</option>
+            <option value="abierta">Abierta</option>
+            <option value="en seguimiento">En seguimiento</option>
+          </select>
+        </div>
+
+        <div class="col-12 col-md-2">
+          <label class="form-label text-secondary">Desde</label>
+          <input class="form-control form-control-dark" type="date" [(ngModel)]="dateFrom">
+        </div>
+
+        <div class="col-12 col-md-2">
+          <label class="form-label text-secondary">Hasta</label>
+          <input class="form-control form-control-dark" type="date" [(ngModel)]="dateTo">
+        </div>
+
+        <div class="col-12 col-md-3 d-flex gap-2">
+          <button class="btn btn-primary fw-bold flex-fill" type="button" (click)="loadHistory()" [disabled]="loading">
+            {{ loading ? 'Cargando...' : 'Aplicar filtros' }}
+          </button>
+          <button class="btn btn-outline-secondary fw-bold" type="button" (click)="clearFilters()">Limpiar</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="row g-3">
+      <article class="col-12 col-xl-8">
+        <div class="history-card rounded-3 p-3 h-100">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="h6 text-white mb-0">Listado historico</h2>
+            <span class="text-secondary small">{{ operations.length }} resultados</span>
+          </div>
+
+          <div class="empty-state" *ngIf="!loading && !operations.length">
+            No hay operaciones para el periodo seleccionado.
+          </div>
+
+          <div class="table-responsive" *ngIf="operations.length">
+            <table class="table table-dark table-hover align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Activo</th>
+                  <th>Tipo</th>
+                  <th>Entrada</th>
+                  <th>Salida</th>
+                  <th>Estado</th>
+                  <th>Resultado</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  *ngFor="let operation of operations"
+                  [class.selected-row]="selectedOperation?._id === operation._id"
+                  (click)="selectOperation(operation)"
+                >
+                  <td>{{ operation.createdAt | date:'shortDate' }}</td>
+                  <td>{{ operation.symbol }}</td>
+                  <td class="text-capitalize">{{ operation.operationType }}</td>
+                  <td>{{ operation.entryPrice | number:'1.2-2' }}</td>
+                  <td>{{ operation.exitPrice ?? operation.currentPrice ?? 'N/D' }}</td>
+                  <td>{{ getStatusLabel(operation.status) }}</td>
+                  <td [class.positive-text]="isPositive(getOperationResult(operation))" [class.negative-text]="!isPositive(getOperationResult(operation))">
+                    {{ getOperationResult(operation) | number:'1.2-2' }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </article>
+
+      <aside class="col-12 col-xl-4">
+        <div class="history-card rounded-3 p-3 h-100">
+          <ng-container *ngIf="selectedOperation; else noSelection">
+            <span class="text-secondary small">Detalle historico</span>
+            <h2 class="history-title text-white mb-3">{{ selectedOperation.symbol }}</h2>
+
+            <div class="detail-grid">
+              <div>
+                <span>Fecha apertura</span>
+                <strong>{{ selectedOperation.createdAt | date:'short' }}</strong>
+              </div>
+              <div>
+                <span>Fecha cierre</span>
+                <strong>{{ selectedOperation.closedAt ? (selectedOperation.closedAt | date:'short') : 'Sin cierre' }}</strong>
+              </div>
+              <div>
+                <span>Tipo</span>
+                <strong class="text-capitalize">{{ selectedOperation.operationType }}</strong>
+              </div>
+              <div>
+                <span>Estado</span>
+                <strong>{{ getStatusLabel(selectedOperation.status) }}</strong>
+              </div>
+              <div>
+                <span>Precio entrada</span>
+                <strong>{{ selectedOperation.entryPrice | number:'1.2-2' }}</strong>
+              </div>
+              <div>
+                <span>Precio salida</span>
+                <strong>{{ selectedOperation.exitPrice ?? selectedOperation.currentPrice ?? 'N/D' }}</strong>
+              </div>
+              <div>
+                <span>Cantidad</span>
+                <strong>{{ selectedOperation.amount | number:'1.0-6' }}</strong>
+              </div>
+              <div>
+                <span>Resultado</span>
+                <strong [class.positive-text]="isPositive(getOperationResult(selectedOperation))" [class.negative-text]="!isPositive(getOperationResult(selectedOperation))">
+                  {{ getOperationResult(selectedOperation) | number:'1.2-2' }}
+                </strong>
+              </div>
+            </div>
+          </ng-container>
+
+          <ng-template #noSelection>
+            <div class="empty-state">
+              Seleccione una operacion historica para ver su detalle y resultado.
+            </div>
+          </ng-template>
+        </div>
+      </aside>
+    </section>
+  </main>
+</div>
