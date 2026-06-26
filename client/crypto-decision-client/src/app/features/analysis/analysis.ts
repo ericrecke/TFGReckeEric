@@ -3,13 +3,18 @@ import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { finalize, Subject, takeUntil } from 'rxjs';
-import type { Chart as ChartType } from 'chart.js';
+import type {
+  CandlestickData,
+  IChartApi,
+  ISeriesApi,
+  UTCTimestamp
+} from 'lightweight-charts';
 
 import { AuthService } from '../../core/services/auth.service';
 import { MarketService } from '../../core/services/market.service';
 import { AnalysisService } from '../../core/services/analysis.service';
 import { AuthUser } from '../../shared/models/auth.models';
-import { MarketData, TechnicalIndicator } from '../../shared/models/market.models';
+import { MarketCandle, MarketData, TechnicalIndicator } from '../../shared/models/market.models';
 import { Recommendation, RiskParametersRequest } from '../../shared/models/analysis.models';
 
 type Strategy = 'trend' | 'breakout' | 'mean-reversion';
@@ -22,7 +27,7 @@ type Strategy = 'trend' | 'breakout' | 'mean-reversion';
   styleUrl: './analysis.scss'
 })
 export class AnalysisComponent implements OnInit, AfterViewInit, OnDestroy {
-  @ViewChild('analysisChart') private analysisChartRef?: ElementRef<HTMLCanvasElement>;
+  @ViewChild('analysisChart') private analysisChartRef?: ElementRef<HTMLElement>;
 
   symbols: string[] = [];
   selectedSymbol = '';
@@ -43,7 +48,8 @@ export class AnalysisComponent implements OnInit, AfterViewInit, OnDestroy {
   successMessage = '';
   recommendation: Recommendation | null = null;
 
-  private chart?: ChartType;
+  private chart?: IChartApi;
+  private candleSeries?: ISeriesApi<'Candlestick'>;
   private viewInitialized = false;
   private readonly destroy$ = new Subject<void>();
 
@@ -69,7 +75,7 @@ export class AnalysisComponent implements OnInit, AfterViewInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
-    this.chart?.destroy();
+    this.chart?.remove();
   }
 
   loadSymbols(): void {
@@ -289,11 +295,11 @@ export class AnalysisComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private loadHistoryChart(symbol: string): void {
-    this.marketService.getMarketHistory(symbol).pipe(
+    this.marketService.getMarketCandles(symbol, this.selectedTimeframe).pipe(
       takeUntil(this.destroy$)
     ).subscribe({
       next: (history) => {
-        this.renderChart([...history.data].reverse());
+        this.renderChart(history.data);
         this.changeDetectorRef.detectChanges();
       },
       error: (error) => {
@@ -314,59 +320,66 @@ export class AnalysisComponent implements OnInit, AfterViewInit, OnDestroy {
     };
   }
 
-  private async renderChart(history: MarketData[]): Promise<void> {
+  private async renderChart(candleData: MarketCandle[]): Promise<void> {
     if (!this.viewInitialized || !this.analysisChartRef) {
       return;
     }
 
-    const { default: Chart } = await import('chart.js/auto');
-    const labels = history.map((item) => new Date(item.timestamp).toLocaleTimeString());
-    const prices = history.map((item) => item.price);
+    const { createChart } = await import('lightweight-charts');
+    const candles = candleData.map((item) => ({
+      time: Math.floor(new Date(item.openTime).getTime() / 1000) as UTCTimestamp,
+      open: item.open,
+      high: item.high,
+      low: item.low,
+      close: item.close
+    }));
+    const chartData: CandlestickData[] = candles.map((item) => ({
+      time: item.time,
+      open: item.open,
+      high: item.high,
+      low: item.low,
+      close: item.close
+    }));
+    const container = this.analysisChartRef.nativeElement;
 
-    this.chart?.destroy();
-    this.chart = new Chart(this.analysisChartRef.nativeElement, {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [
-          {
-            data: prices,
-            borderColor: '#22c55e',
-            backgroundColor: 'rgba(34, 197, 94, 0.12)',
-            fill: true,
-            tension: 0.25,
-            pointRadius: 3
-          }
-        ]
+    this.chart?.remove();
+    this.chart = createChart(container, {
+      width: container.clientWidth || 300,
+      height: container.clientHeight || 300,
+      layout: {
+        background: { color: '#0d1b2d' },
+        textColor: '#dbeafe'
       },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            display: false
-          }
-        },
-        scales: {
-          x: {
-            ticks: {
-              color: '#8b98ad',
-              maxTicksLimit: 6
-            },
-            grid: {
-              color: 'rgba(148, 163, 184, 0.08)'
-            }
-          },
-          y: {
-            ticks: {
-              color: '#8b98ad'
-            },
-            grid: {
-              color: 'rgba(148, 163, 184, 0.1)'
-            }
-          }
-        }
+      grid: {
+        vertLines: { color: 'rgba(148, 163, 184, 0.08)' },
+        horzLines: { color: 'rgba(148, 163, 184, 0.1)' }
+      },
+      rightPriceScale: {
+        borderVisible: false,
+        autoScale: true
+      },
+      timeScale: {
+        borderVisible: false,
+        timeVisible: true,
+        secondsVisible: false,
+        rightOffset: 8,
+        barSpacing: 18
+      },
+      localization: {
+        priceFormatter: (price: number) => price < 1 ? price.toFixed(6) : price.toFixed(2)
       }
+    });
+    this.candleSeries = this.chart.addCandlestickSeries({
+      upColor: '#22c55e',
+      downColor: '#ef4444',
+      borderVisible: false,
+      wickUpColor: '#22c55e',
+      wickDownColor: '#ef4444'
+    });
+    this.candleSeries.setData(chartData);
+    this.chart.timeScale().setVisibleLogicalRange({
+      from: Math.max(0, chartData.length - 100),
+      to: chartData.length + 5
     });
     this.changeDetectorRef.detectChanges();
   }

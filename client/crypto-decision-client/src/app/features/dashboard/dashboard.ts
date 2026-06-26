@@ -2,13 +2,26 @@ import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, OnDestroy, OnI
 import { CommonModule, DecimalPipe, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { finalize, forkJoin, interval, Subject, takeUntil } from 'rxjs';
-import type { Chart as ChartType } from 'chart.js';
+import { finalize, interval, Subject, takeUntil } from 'rxjs';
+import type {
+  CandlestickData,
+  IChartApi,
+  ISeriesApi,
+  UTCTimestamp
+} from 'lightweight-charts';
 
 import { AuthService } from '../../core/services/auth.service';
 import { MarketService } from '../../core/services/market.service';
-import { MarketData, TechnicalIndicator } from '../../shared/models/market.models';
+import { MarketCandle, MarketData, TechnicalIndicator } from '../../shared/models/market.models';
 import { AuthUser } from '../../shared/models/auth.models';
+
+interface CandlePoint {
+  time: UTCTimestamp;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+}
 
 @Component({
   selector: 'app-dashboard',
@@ -18,24 +31,31 @@ import { AuthUser } from '../../shared/models/auth.models';
   styleUrl: './dashboard.scss'
 })
 export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
-  @ViewChild('priceChart') private priceChartRef?: ElementRef<HTMLCanvasElement>;
+  @ViewChild('priceChart') private priceChartRef?: ElementRef<HTMLElement>;
 
   symbols: string[] = [];
   marketData: MarketData[] = [];
   indicators: TechnicalIndicator[] = [];
   selectedChartSymbol = '';
+  selectedChartPeriod = '1H';
   user: AuthUser | null = null;
 
   loading = false;
   errorMessage = '';
   chartLoading = false;
+  chartTransitionLoading = false;
   lastUpdatedAt: Date | null = null;
 
-  private priceChart?: ChartType;
+  private priceChart?: IChartApi;
+  private priceSeries?: ISeriesApi<'Candlestick'>;
   private viewInitialized = false;
   private readonly refreshIntervalMs = 30000;
+  private readonly liveRefreshIntervalMs = 5000;
+  private readonly fallbackSymbols = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'SOLUSDT'];
   private readonly destroy$ = new Subject<void>();
   private marketRefreshInProgress = false;
+  private liveRefreshInProgress = false;
+  private priceChartCandles: CandlePoint[] = [];
 
   constructor(
     private authService: AuthService,
@@ -58,27 +78,11 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
-    this.priceChart?.destroy();
+    this.priceChart?.remove();
   }
 
   loadSymbolsAndMarketData(): void {
-    this.loading = true;
-    this.errorMessage = '';
-
-    this.marketService.getSymbols().pipe(
-      takeUntil(this.destroy$)
-    ).subscribe({
-      next: (response) => {
-        this.symbols = response.symbols ?? [];
-        this.selectedChartSymbol = this.symbols[0] ?? '';
-        this.loadMarketData();
-      },
-      error: (error) => {
-        this.loading = false;
-        this.errorMessage =
-          error.error?.message || 'No se pudieron obtener los activos disponibles.';
-      }
-    });
+    this.loadMarketData();
   }
 
   loadMarketData(): void {
@@ -90,18 +94,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     this.loading = true;
     this.errorMessage = '';
 
-    if (!this.symbols.length) {
-      this.marketData = [];
-      this.loading = false;
-      this.marketRefreshInProgress = false;
-      return;
-    }
-
-    const requests = this.symbols.map((symbol) =>
-      this.marketService.getMarketData(symbol)
-    );
-
-    forkJoin(requests).pipe(
+    this.marketService.getMarketSummary().pipe(
       takeUntil(this.destroy$),
       finalize(() => {
         this.marketRefreshInProgress = false;
@@ -109,13 +102,11 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
         this.changeDetectorRef.detectChanges();
       })
     ).subscribe({
-      next: (responses) => {
-        this.marketData = responses
-          .map((response) => response.data)
-          .filter((data): data is MarketData => !!data);
-        this.indicators = responses
-          .map((response) => response.indicator)
-          .filter((indicator): indicator is TechnicalIndicator => !!indicator);
+      next: (response) => {
+        this.symbols = response.symbols ?? [];
+        this.marketData = response.data ?? [];
+        this.indicators = response.indicators ?? [];
+        this.selectedChartSymbol = this.selectedChartSymbol || this.symbols[0] || '';
         this.lastUpdatedAt = new Date();
         this.loadPriceChart(this.selectedChartSymbol);
         this.changeDetectorRef.detectChanges();
@@ -131,6 +122,65 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     this.loadMarketData();
   }
 
+  loadLiveMarketData(): void {
+    if (this.liveRefreshInProgress) {
+      return;
+    }
+
+    this.liveRefreshInProgress = true;
+
+    this.marketService.getMarketLive().pipe(
+      takeUntil(this.destroy$),
+      finalize(() => {
+        this.liveRefreshInProgress = false;
+        this.changeDetectorRef.detectChanges();
+      })
+    ).subscribe({
+      next: (response) => {
+        const liveData = response.data ?? [];
+        this.symbols = response.symbols ?? this.symbols;
+        this.marketData = liveData.map((liveItem) => ({
+          ...this.marketData.find((item) => item.symbol === liveItem.symbol),
+          ...liveItem
+        }));
+        this.lastUpdatedAt = new Date();
+        this.appendLivePriceToChart();
+        this.changeDetectorRef.detectChanges();
+      },
+      error: () => {
+        this.changeDetectorRef.detectChanges();
+      }
+    });
+  }
+
+  getDisplayAssets(): Array<Partial<MarketData> & { symbol: string }> {
+    if (this.marketData.length) {
+      return this.marketData;
+    }
+
+    const symbols = this.symbols.length ? this.symbols : this.fallbackSymbols;
+
+    return symbols.map((symbol) => ({
+      symbol,
+      price: 0,
+      priceChangePercent: 0,
+      volume: 0
+    }));
+  }
+
+  getTableAssets(): Array<Partial<MarketData> & { symbol: string }> {
+    if (this.marketData.length) {
+      return this.marketData;
+    }
+
+    return [{
+      symbol: '-',
+      price: 0,
+      priceChangePercent: 0,
+      volume: 0
+    }];
+  }
+
   loadPriceChart(symbol: string): void {
     if (!symbol) {
       return;
@@ -139,11 +189,14 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     this.selectedChartSymbol = symbol;
     const requestedSymbol = symbol;
     this.chartLoading = true;
+    this.chartTransitionLoading = Boolean(this.priceChart);
+    this.changeDetectorRef.detectChanges();
 
-    this.marketService.getMarketHistory(symbol).pipe(
+    this.marketService.getMarketCandles(symbol, this.selectedChartPeriod).pipe(
       takeUntil(this.destroy$),
       finalize(() => {
         this.chartLoading = false;
+        this.chartTransitionLoading = false;
         this.changeDetectorRef.detectChanges();
       })
     ).subscribe({
@@ -152,8 +205,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
           return;
         }
 
-        const history = [...response.data].reverse();
-        this.renderPriceChart(history);
+        this.renderPriceChart(response.data);
       },
       error: (error) => {
         this.errorMessage =
@@ -162,11 +214,26 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
+  setChartPeriod(period: string): void {
+    if (this.selectedChartPeriod === period) {
+      return;
+    }
+
+    this.selectedChartPeriod = period;
+    this.loadPriceChart(this.selectedChartSymbol);
+  }
+
   private startAutoRefresh(): void {
     interval(this.refreshIntervalMs).pipe(
       takeUntil(this.destroy$)
     ).subscribe(() => {
       this.loadMarketData();
+    });
+
+    interval(this.liveRefreshIntervalMs).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(() => {
+      this.loadLiveMarketData();
     });
   }
 
@@ -175,8 +242,8 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     this.router.navigate(['/login']);
   }
 
-  isPositiveChange(value: number): boolean {
-    return value >= 0;
+  isPositiveChange(value: number | null | undefined): boolean {
+    return (value ?? 0) >= 0;
   }
 
   getObservedAssetsCount(): number {
@@ -302,61 +369,150 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     return 'Moderado';
   }
 
-  private async renderPriceChart(history: MarketData[]): Promise<void> {
+  private async renderPriceChart(candleData: MarketCandle[]): Promise<void> {
     if (!this.viewInitialized || !this.priceChartRef) {
       return;
     }
 
-    const { default: Chart } = await import('chart.js/auto');
-    const labels = history.map((item) => new Date(item.timestamp).toLocaleTimeString());
-    const prices = history.map((item) => item.price);
+    const { createChart } = await import('lightweight-charts');
+    const candles = candleData.map((item) => ({
+      time: Math.floor(new Date(item.openTime).getTime() / 1000) as UTCTimestamp,
+      open: item.open,
+      high: item.high,
+      low: item.low,
+      close: item.close
+    }));
+    this.priceChartCandles = candles;
+    const container = this.priceChartRef.nativeElement;
+    const chartData: CandlestickData[] = candles.map((item) => ({
+      time: item.time,
+      open: item.open,
+      high: item.high,
+      low: item.low,
+      close: item.close
+    }));
 
-    this.priceChart?.destroy();
-    this.priceChart = new Chart(this.priceChartRef.nativeElement, {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [
-          {
-            label: `${this.selectedChartSymbol} precio`,
-            data: prices,
-            borderColor: '#22c55e',
-            backgroundColor: 'rgba(34, 197, 94, 0.12)',
-            fill: true,
-            tension: 0.25,
-            pointRadius: 3
-          }
-        ]
+    this.priceChart?.remove();
+    this.priceChart = createChart(container, {
+      width: container.clientWidth || 300,
+      height: container.clientHeight || 290,
+      layout: {
+        background: { color: '#0d1b2d' },
+        textColor: '#dbeafe'
       },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            display: false
-          }
-        },
-        scales: {
-          x: {
-            ticks: {
-              color: '#8b98ad',
-              maxTicksLimit: 6
-            },
-            grid: {
-              color: 'rgba(148, 163, 184, 0.08)'
-            }
-          },
-          y: {
-            beginAtZero: false,
-            ticks: {
-              color: '#8b98ad'
-            },
-            grid: {
-              color: 'rgba(148, 163, 184, 0.1)'
-            }
-          }
-        }
+      grid: {
+        vertLines: { color: 'rgba(148, 163, 184, 0.08)' },
+        horzLines: { color: 'rgba(148, 163, 184, 0.1)' }
+      },
+      rightPriceScale: {
+        borderVisible: false,
+        autoScale: true
+      },
+      timeScale: {
+        borderVisible: false,
+        timeVisible: true,
+        secondsVisible: false,
+        rightOffset: 8,
+        barSpacing: 18
+      },
+      localization: {
+        priceFormatter: (price: number) => price < 1 ? price.toFixed(6) : price.toFixed(2)
       }
     });
+    this.priceSeries = this.priceChart.addCandlestickSeries({
+      upColor: '#22c55e',
+      downColor: '#ef4444',
+      borderVisible: false,
+      wickUpColor: '#22c55e',
+      wickDownColor: '#ef4444'
+    });
+    this.priceSeries.setData(chartData);
+    this.priceChart.timeScale().setVisibleLogicalRange({
+      from: Math.max(0, chartData.length - 100),
+      to: chartData.length + 5
+    });
+  }
+
+  private appendLivePriceToChart(): void {
+    const selectedMarketData = this.getSelectedMarketData();
+
+    if (!this.priceChart || !this.priceSeries || !selectedMarketData) {
+      return;
+    }
+
+    const lastCandle = this.priceChartCandles[this.priceChartCandles.length - 1];
+    const lastPrice = lastCandle?.close;
+
+    if (lastPrice === selectedMarketData.price) {
+      return;
+    }
+
+    const nextTime = this.getBucketTime(new Date(selectedMarketData.timestamp));
+    const lastTime = lastCandle?.time;
+
+    if (lastTime === nextTime) {
+      const open = lastCandle?.open ?? selectedMarketData.price;
+      const close = selectedMarketData.price;
+      const candle: CandlePoint = {
+        time: nextTime,
+        open,
+        high: Math.max(lastCandle?.high ?? close, close),
+        low: Math.min(lastCandle?.low ?? close, close),
+        close
+      };
+      this.priceChartCandles[this.priceChartCandles.length - 1] = candle;
+      this.priceSeries.update(candle);
+      return;
+    }
+
+    const candle: CandlePoint = {
+      time: nextTime,
+      open: selectedMarketData.price,
+      high: selectedMarketData.price,
+      low: selectedMarketData.price,
+      close: selectedMarketData.price
+    };
+    this.priceChartCandles.push(candle);
+    this.priceSeries.update(candle);
+
+    const maxPoints = this.getMaxChartPoints();
+    while (this.priceChartCandles.length > maxPoints) {
+      this.priceChartCandles.shift();
+    }
+  }
+
+  private getMaxChartPoints(): number {
+    return 1000;
+  }
+
+  private getBucketDate(date: Date): Date {
+    const bucketDate = new Date(date);
+    bucketDate.setUTCSeconds(0, 0);
+
+    if (this.selectedChartPeriod === '1H') {
+      bucketDate.setUTCMinutes(0);
+      return bucketDate;
+    }
+
+    if (this.selectedChartPeriod === '4H') {
+      const bucketHour = Math.floor(bucketDate.getUTCHours() / 4) * 4;
+      bucketDate.setUTCHours(bucketHour, 0);
+      return bucketDate;
+    }
+
+    if (this.selectedChartPeriod === '1D') {
+      bucketDate.setUTCHours(0, 0);
+      return bucketDate;
+    }
+
+    const day = bucketDate.getUTCDay();
+    const daysFromMonday = day === 0 ? 6 : day - 1;
+    bucketDate.setUTCDate(bucketDate.getUTCDate() - daysFromMonday);
+    bucketDate.setUTCHours(0, 0);
+    return bucketDate;
+  }
+
+  private getBucketTime(date: Date): UTCTimestamp {
+    return Math.floor(this.getBucketDate(date).getTime() / 1000) as UTCTimestamp;
   }
 }

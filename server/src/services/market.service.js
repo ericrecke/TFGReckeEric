@@ -42,9 +42,72 @@ const getTicker24h = async (symbol) => {
     };
 };
 
+const mapTickerResponse = (ticker) => ({
+    symbol: ticker.symbol,
+    price: parseFloat(ticker.lastPrice),
+    changePercent: parseFloat(ticker.priceChangePercent),
+    priceChangePercent: parseFloat(ticker.priceChangePercent),
+    volume: parseFloat(ticker.volume),
+    quoteVolume: parseFloat(ticker.quoteVolume),
+    highPrice: parseFloat(ticker.highPrice),
+    lowPrice: parseFloat(ticker.lowPrice),
+    source: 'Binance API',
+    timestamp: new Date()
+});
+
+const getAllowedTickers24h = async () => {
+    const response = await axios.get(`${BINANCE_BASE_URL}/api/v3/ticker/24hr`, {
+        params: {
+            symbols: JSON.stringify(allowedSymbols)
+        },
+        timeout: 10000
+    });
+
+    return response.data.map(mapTickerResponse);
+};
+
+const periodIntervals = {
+    '1H': '1h',
+    '4H': '4h',
+    '1D': '1d',
+    '1W': '1w'
+};
+
+const getCandles = async (symbol, period = '1H', limit = 1000) => {
+    const normalizedSymbol = validateAllowedSymbol(symbol);
+    const normalizedPeriod = String(period).toUpperCase();
+    const interval = periodIntervals[normalizedPeriod];
+
+    if (!interval) {
+        throw new Error('Invalid period. Allowed periods: 1H, 4H, 1D, 1W');
+    }
+
+    const normalizedLimit = Math.floor(Math.min(1000, Math.max(1, Number(limit) || 1000)));
+    const response = await axios.get(`${BINANCE_BASE_URL}/api/v3/klines`, {
+        params: {
+            symbol: normalizedSymbol,
+            interval,
+            limit: normalizedLimit
+        },
+        timeout: 10000
+    });
+
+    return response.data.map((kline) => ({
+        openTime: new Date(kline[0]),
+        closeTime: new Date(kline[6]),
+        open: parseFloat(kline[1]),
+        high: parseFloat(kline[2]),
+        low: parseFloat(kline[3]),
+        close: parseFloat(kline[4]),
+        volume: parseFloat(kline[5])
+    }));
+};
+
 module.exports = {
     getAllowedSymbols,
-    getTicker24h
+    getTicker24h,
+    getAllowedTickers24h,
+    getCandles
 };
 
 

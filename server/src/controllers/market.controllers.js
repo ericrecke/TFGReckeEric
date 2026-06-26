@@ -31,18 +31,98 @@ const getMarketDataBySymbol = async (req, res) => {
     }
 }
 
-const getMarketHistoryBySymbol = async (req, res) => {
+const getMarketSummary = async (req, res) => {
+    try {
+        const tickers = await marketService.getAllowedTickers24h();
+        const savedMarketData = await MarketData.insertMany(tickers);
+        const indicators = await Promise.all(
+            savedMarketData.map((item) => indicatorService.calculateAndSaveIndicators(item))
+        );
+
+        return res.json({
+            message: 'Market summary fetched successfully',
+            symbols: tickers.map((item) => item.symbol),
+            data: savedMarketData,
+            indicators: indicators.filter(Boolean)
+        });
+    } catch (error) {
+        return res.status(500).json({
+            message: 'Error fetching market summary',
+            error: error.message
+        });
+    }
+};
+
+const getMarketLive = async (req, res) => {
+    try {
+        const tickers = await marketService.getAllowedTickers24h();
+
+        return res.json({
+            message: 'Live market data fetched successfully',
+            symbols: tickers.map((item) => item.symbol),
+            data: tickers
+        });
+    } catch (error) {
+        return res.status(500).json({
+            message: 'Error fetching live market data',
+            error: error.message
+        });
+    }
+};
+
+const getMarketCandlesBySymbol = async (req, res) => {
     try {
         const { symbol } = req.params;
-
-        const history = await MarketData.find({
-            symbol: String(symbol).toUpperCase()
-        })
-            .sort({ timestamp: -1 })
-            .limit(50);
+        const period = String(req.query.period || '1H').toUpperCase();
+        const candles = await marketService.getCandles(symbol, period, req.query.limit);
 
         return res.json({
             symbol: String(symbol).toUpperCase(),
+            period,
+            count: candles.length,
+            data: candles
+        });
+    } catch (error) {
+        const isValidationError =
+            error.message.includes('not allowed') ||
+            error.message.includes('Invalid period');
+
+        return res.status(isValidationError ? 400 : 500).json({
+            message: 'Error al obtener velas historicas',
+            error: error.message
+        });
+    }
+};
+
+const getPeriodStartDate = (period) => {
+    const now = Date.now();
+    const periods = {
+        '1H': 24 * 60 * 60 * 1000,
+        '4H': 7 * 24 * 60 * 60 * 1000,
+        '1D': 30 * 24 * 60 * 60 * 1000,
+        '1W': 180 * 24 * 60 * 60 * 1000
+    };
+
+    return new Date(now - (periods[period] || periods['1H']));
+};
+
+const getMarketHistoryBySymbol = async (req, res) => {
+    try {
+        const { symbol } = req.params;
+        const period = String(req.query.period || '1H').toUpperCase();
+
+        const history = await MarketData.find({
+            symbol: String(symbol).toUpperCase(),
+            timestamp: {
+                $gte: getPeriodStartDate(period)
+            }
+        })
+            .sort({ timestamp: -1 })
+            .limit(1000);
+
+        return res.json({
+            symbol: String(symbol).toUpperCase(),
+            period,
             count: history.length,
             data: history
         });
@@ -57,5 +137,8 @@ const getMarketHistoryBySymbol = async (req, res) => {
 module.exports = {
     getSymbols,
     getMarketDataBySymbol,
+    getMarketSummary,
+    getMarketLive,
+    getMarketCandlesBySymbol,
     getMarketHistoryBySymbol
 };

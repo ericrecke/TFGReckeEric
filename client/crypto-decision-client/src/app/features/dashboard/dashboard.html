@@ -35,7 +35,7 @@
 
       <div class="d-flex align-items-center gap-2 flex-wrap">
         <div class="refresh-status rounded-3 px-3 py-2">
-          <span class="d-block">Auto refresh 30s</span>
+          <span class="d-block">Precios live 5s / guardado 30s</span>
           <strong class="d-block" *ngIf="lastUpdatedAt">Ultima: {{ lastUpdatedAt | date:'shortTime' }}</strong>
         </div>
 
@@ -53,12 +53,8 @@
       {{ errorMessage }}
     </div>
 
-    <div class="alert alert-primary" *ngIf="loading && !marketData.length">
-      Cargando datos de mercado...
-    </div>
-
-    <section class="asset-strip row g-3 mb-3" *ngIf="marketData.length" aria-label="Activos disponibles">
-      <div class="col-12 col-sm-6 col-xl" *ngFor="let item of marketData">
+    <section class="asset-strip row g-3 mb-3" aria-label="Activos disponibles">
+      <div class="col-12 col-sm-6 col-xl" *ngFor="let item of getDisplayAssets()">
         <button
           type="button"
           class="asset-card w-100 h-100 rounded-3 p-3 text-start"
@@ -75,16 +71,18 @@
             [class.negative-text]="!isPositiveChange(item.priceChangePercent)">
             {{ item.priceChangePercent | number:'1.2-2' }}%
           </small>
+          <span class="loading-chip mt-2" *ngIf="loading && !marketData.length">Cargando</span>
         </button>
       </div>
     </section>
 
-    <section class="row g-3 mb-3" *ngIf="marketData.length" aria-label="Metricas operativas">
+    <section class="row g-3 mb-3" aria-label="Metricas operativas">
       <article class="col-12 col-sm-6 col-xl">
         <div class="dashboard-card h-100 rounded-3 p-3">
           <span class="metric-label">Activos observados</span>
           <strong class="metric-value">{{ getObservedAssetsCount() }}</strong>
-          <small class="metric-label">{{ getBullishAssetsCount() }} alcistas / {{ getBearishAssetsCount() }} bajistas</small>
+          <small class="metric-label" *ngIf="!loading || marketData.length">{{ getBullishAssetsCount() }} alcistas / {{ getBearishAssetsCount() }} bajistas</small>
+          <small class="metric-label" *ngIf="loading && !marketData.length">Cargando universo observado</small>
         </div>
       </article>
 
@@ -93,7 +91,7 @@
           <span class="metric-label">Variacion promedio</span>
           <strong class="metric-value" [class.positive-text]="isPositiveChange(getAverageChangePercent() || 0)"
             [class.negative-text]="!isPositiveChange(getAverageChangePercent() || 0)">
-            {{ getAverageChangePercent() | number:'1.2-2' }}%
+            {{ (getAverageChangePercent() || 0) | number:'1.2-2' }}%
           </strong>
           <small class="metric-label">Promedio simple del universo observado</small>
         </div>
@@ -111,7 +109,7 @@
         <div class="dashboard-card h-100 rounded-3 p-3">
           <span class="metric-label">Mejor desempeno</span>
           <strong class="metric-value positive-text">{{ getTopPerformer()?.symbol || '-' }}</strong>
-          <small class="metric-label">{{ getTopPerformer()?.priceChangePercent | number:'1.2-2' }}%</small>
+          <small class="metric-label">{{ (getTopPerformer()?.priceChangePercent || 0) | number:'1.2-2' }}%</small>
         </div>
       </article>
 
@@ -119,12 +117,12 @@
         <div class="dashboard-card h-100 rounded-3 p-3">
           <span class="metric-label">Mayor retroceso</span>
           <strong class="metric-value negative-text">{{ getWorstPerformer()?.symbol || '-' }}</strong>
-          <small class="metric-label">{{ getWorstPerformer()?.priceChangePercent | number:'1.2-2' }}%</small>
+          <small class="metric-label">{{ (getWorstPerformer()?.priceChangePercent || 0) | number:'1.2-2' }}%</small>
         </div>
       </article>
     </section>
 
-    <section class="row g-3 mb-3" *ngIf="marketData.length">
+    <section class="row g-3 mb-3">
       <article class="col-12 col-xl-8">
         <div class="dashboard-card rounded-3 p-3 h-100">
           <div class="d-flex justify-content-between gap-3 mb-3 flex-wrap">
@@ -134,19 +132,22 @@
             </div>
 
             <div class="btn-group btn-group-sm" aria-label="Filtros de periodo">
-              <button class="btn btn-primary" type="button">1H</button>
-              <button class="btn btn-outline-secondary" type="button">4H</button>
-              <button class="btn btn-outline-secondary" type="button">1D</button>
-              <button class="btn btn-outline-secondary" type="button">1W</button>
+              <button class="btn" [class.btn-primary]="selectedChartPeriod === '1H'" [class.btn-outline-secondary]="selectedChartPeriod !== '1H'" type="button" (click)="setChartPeriod('1H')">1H</button>
+              <button class="btn" [class.btn-primary]="selectedChartPeriod === '4H'" [class.btn-outline-secondary]="selectedChartPeriod !== '4H'" type="button" (click)="setChartPeriod('4H')">4H</button>
+              <button class="btn" [class.btn-primary]="selectedChartPeriod === '1D'" [class.btn-outline-secondary]="selectedChartPeriod !== '1D'" type="button" (click)="setChartPeriod('1D')">1D</button>
+              <button class="btn" [class.btn-primary]="selectedChartPeriod === '1W'" [class.btn-outline-secondary]="selectedChartPeriod !== '1W'" type="button" (click)="setChartPeriod('1W')">1W</button>
             </div>
           </div>
 
-          <div class="text-info small mb-2" *ngIf="chartLoading">
-            Actualizando grafico...
+          <div class="text-info small mb-2" *ngIf="chartLoading || (loading && !marketData.length)">
+            {{ marketData.length ? 'Actualizando grafico...' : 'Cargando grafico y mercado...' }}
           </div>
 
-          <div class="chart-wrapper">
-            <canvas #priceChart></canvas>
+          <div class="chart-wrapper position-relative" [class.chart-muted]="chartTransitionLoading">
+            <div class="chart-placeholder" *ngIf="(loading && !marketData.length) || chartTransitionLoading">
+              {{ chartTransitionLoading ? 'Cargando nuevo grafico...' : 'Esperando datos de mercado' }}
+            </div>
+            <div #priceChart class="trading-chart"></div>
           </div>
 
           <button class="btn btn-primary d-block mx-auto mt-3 px-5 fw-bold" type="button" (click)="openAnalysis()">
@@ -238,7 +239,7 @@
       </aside>
     </section>
 
-    <section class="dashboard-card rounded-3 p-3" *ngIf="marketData.length">
+    <section class="dashboard-card rounded-3 p-3">
       <div class="mb-3">
         <h2 class="h6 text-white mb-1">Activos observados</h2>
         <p class="text-secondary mb-0">Monedas configuradas para seguimiento inicial</p>
@@ -256,7 +257,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let item of marketData">
+            <tr *ngFor="let item of getTableAssets()">
               <td>{{ item.symbol }}</td>
               <td>{{ item.price | number:'1.2-2' }}</td>
               <td [class.positive-text]="isPositiveChange(item.priceChangePercent)"

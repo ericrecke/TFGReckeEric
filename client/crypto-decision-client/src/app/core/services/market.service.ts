@@ -2,8 +2,10 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
+  MarketCandlesResponse,
   MarketDataResponse,
   MarketHistoryResponse,
+  MarketSummaryResponse,
   MarketSymbolsResponse
 } from '../../shared/models/market.models';
 import { AuthService } from './auth.service';
@@ -37,11 +39,45 @@ export class MarketService {
     );
   }
 
-  getMarketHistory(symbol: string): Observable<MarketHistoryResponse> {
+  getMarketSummary(): Observable<MarketSummaryResponse> {
+    return this.http.get<MarketSummaryResponse>(
+      `${this.apiUrl}/summary`,
+      {
+        headers: this.getAuthHeaders()
+      }
+    );
+  }
+
+  getMarketLive(): Observable<MarketSummaryResponse> {
+    return this.http.get<MarketSummaryResponse>(
+      `${this.apiUrl}/live`,
+      {
+        headers: this.getAuthHeaders()
+      }
+    );
+  }
+
+  getMarketHistory(symbol: string, period = '1H'): Observable<MarketHistoryResponse> {
     return this.http.get<MarketHistoryResponse>(
       `${this.apiUrl}/${symbol}/history`,
       {
-        headers: this.getAuthHeaders()
+        headers: this.getAuthHeaders(),
+        params: {
+          period
+        }
+      }
+    );
+  }
+
+  getMarketCandles(symbol: string, period = '1H', limit = 1000): Observable<MarketCandlesResponse> {
+    return this.http.get<MarketCandlesResponse>(
+      `${this.apiUrl}/${symbol}/candles`,
+      {
+        headers: this.getAuthHeaders(),
+        params: {
+          period,
+          limit
+        }
       }
     );
   }

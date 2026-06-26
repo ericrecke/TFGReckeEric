@@ -37,8 +37,33 @@ export interface MarketDataResponse {
   indicator?: TechnicalIndicator;
 }
 
+export interface MarketSummaryResponse {
+  message: string;
+  symbols: string[];
+  data: MarketData[];
+  indicators?: TechnicalIndicator[];
+}
+
 export interface MarketHistoryResponse {
   symbol: string;
+  period?: string;
   count: number;
   data: MarketData[];
+}
+
+export interface MarketCandle {
+  openTime: string;
+  closeTime: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+export interface MarketCandlesResponse {
+  symbol: string;
+  period: string;
+  count: number;
+  data: MarketCandle[];
 }
