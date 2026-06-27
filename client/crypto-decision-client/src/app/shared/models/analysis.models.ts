@@ -10,6 +10,21 @@ export interface RiskParametersRequest {
   takeProfitPercent: number;
 }
 
+export interface RecommendationAnalysisContext {
+  _id: string;
+  timeframe: string;
+  strategy: string;
+  riskParameters: {
+    capital: number;
+    maxRiskPercent: number;
+    stopLossPercent: number;
+    takeProfitPercent: number;
+  };
+  indicator?: TechnicalIndicator | null;
+  marketData?: MarketData | null;
+  createdAt: string;
+}
+
 export interface Recommendation {
   _id?: string;
   symbol?: string;
@@ -19,6 +34,8 @@ export interface Recommendation {
   confidencePercent: number;
   riskLevel: 'Bajo' | 'Medio' | 'Alto';
   reason: string;
+  riskOverride?: boolean;
+  analysis?: RecommendationAnalysisContext | string | null;
   machineLearning?: {
     predictedResult: 'COMPRAR' | 'ESPERAR' | 'VENDER';
     confidencePercent: number;
@@ -63,4 +80,16 @@ export interface RecommendationsResponse {
   message: string;
   count: number;
   data: Recommendation[];
+  summary: {
+    buy: number;
+    sell: number;
+    hold: number;
+    averageConfidence: number;
+  };
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 }

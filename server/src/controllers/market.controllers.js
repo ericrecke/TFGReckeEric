@@ -70,6 +70,24 @@ const getMarketLive = async (req, res) => {
     }
 };
 
+const getMarketLiveBySymbol = async (req, res) => {
+    try {
+        const ticker = await marketService.getTicker24h(req.params.symbol);
+
+        return res.json({
+            message: 'Live market data fetched successfully',
+            data: ticker
+        });
+    } catch (error) {
+        const isValidationError = error.message.includes('not available');
+
+        return res.status(isValidationError ? 400 : 500).json({
+            message: 'Error fetching live market data',
+            error: error.message
+        });
+    }
+};
+
 const getMarketCandlesBySymbol = async (req, res) => {
     try {
         const { symbol } = req.params;
@@ -84,7 +102,7 @@ const getMarketCandlesBySymbol = async (req, res) => {
         });
     } catch (error) {
         const isValidationError =
-            error.message.includes('not allowed') ||
+            error.message.includes('not available') ||
             error.message.includes('Invalid period');
 
         return res.status(isValidationError ? 400 : 500).json({
@@ -139,6 +157,7 @@ module.exports = {
     getMarketDataBySymbol,
     getMarketSummary,
     getMarketLive,
+    getMarketLiveBySymbol,
     getMarketCandlesBySymbol,
     getMarketHistoryBySymbol
 };

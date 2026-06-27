@@ -148,7 +148,7 @@ const predictMarketDirection = async ({ symbol, timeframe, candles }) => {
             hold: Number((probabilities[1] * 100).toFixed(2)),
             buy: Number((probabilities[2] * 100).toFixed(2))
         },
-        model: 'tensorflow-js-dense-v1',
+        model: 'dss-predictive-v1',
         trainingSamples: prices.length - 21
     };
 };

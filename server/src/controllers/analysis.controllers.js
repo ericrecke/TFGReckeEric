@@ -111,50 +111,40 @@ const getRecommendation = ({
     };
 };
 
-const combineWithPrediction = (recommendation, prediction) => {
+const combineWithPrediction = (recommendation, prediction, hasFavorableRisk) => {
     if (!prediction) {
         return {
             ...recommendation,
+            riskOverride: false,
             machineLearning: null
         };
     }
 
     const modelSummary =
-        `TensorFlow.js proyecto ${prediction.predictedResult.toLowerCase()} ` +
+        `El modelo predictivo recomienda ${prediction.predictedResult.toLowerCase()} ` +
         `con ${prediction.confidencePercent}% de confianza.`;
-    const isDirectionalConflict =
-        recommendation.result !== 'ESPERAR' &&
-        prediction.predictedResult !== 'ESPERAR' &&
-        recommendation.result !== prediction.predictedResult;
-    const isStrongHold =
-        recommendation.result !== 'ESPERAR' &&
-        prediction.predictedResult === 'ESPERAR' &&
-        prediction.confidencePercent >= 55;
-
-    if (isDirectionalConflict || isStrongHold) {
+    if (prediction.predictedResult === 'COMPRAR' && !hasFavorableRisk) {
         return {
             result: 'ESPERAR',
-            confidencePercent: Math.max(50, prediction.confidencePercent),
+            confidencePercent: prediction.confidencePercent,
             riskLevel: recommendation.riskLevel,
-            reason: `${recommendation.reason} ${modelSummary} Al no existir consenso, se prioriza esperar.`,
+            reason: `${modelSummary} La compra se descarta porque los parametros configurados no ofrecen una relacion beneficio/riesgo suficiente.`,
+            riskOverride: true,
             machineLearning: prediction
         };
     }
 
-    if (recommendation.result === prediction.predictedResult) {
-        return {
-            ...recommendation,
-            confidencePercent: Math.round(
-                (recommendation.confidencePercent + prediction.confidencePercent) / 2
-            ),
-            reason: `${recommendation.reason} ${modelSummary} Ambos metodos coinciden.`,
-            machineLearning: prediction
-        };
-    }
+    const methodsAgree = recommendation.result === prediction.predictedResult;
+    const comparison = methodsAgree
+        ? 'El analisis tecnico coincide con la prediccion.'
+        : `El analisis tecnico sugeria ${recommendation.result.toLowerCase()}, pero la decision principal corresponde al modelo predictivo.`;
 
     return {
-        ...recommendation,
-        reason: `${recommendation.reason} ${modelSummary} La prediccion se usa como apoyo y no reemplaza las reglas de riesgo.`,
+        result: prediction.predictedResult,
+        confidencePercent: prediction.confidencePercent,
+        riskLevel: recommendation.riskLevel,
+        reason: `${modelSummary} ${comparison} ${recommendation.reason}`,
+        riskOverride: false,
         machineLearning: prediction
     };
 };
@@ -331,10 +321,20 @@ const generateAnalysis = async (req, res) => {
                 candles
             });
         } catch (predictionError) {
-            console.error('TensorFlow prediction failed:', predictionError);
+            console.error('Prediction model failed:', predictionError);
         }
 
-        const recommendation = combineWithPrediction(ruleRecommendation, prediction);
+        const riskRewardRatio = Number(stopLossPercent) > 0
+            ? Number(takeProfitPercent) / Number(stopLossPercent)
+            : 0;
+        const hasFavorableRisk =
+            riskRewardRatio >= 1.5 &&
+            Number(maxRiskPercent) <= 3;
+        const recommendation = combineWithPrediction(
+            ruleRecommendation,
+            prediction,
+            hasFavorableRisk
+        );
 
         const analysis = await Analysis.create({
             user: req.user._id,

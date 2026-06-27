@@ -43,6 +43,7 @@ export class AnalysisComponent implements OnInit, AfterViewInit, OnDestroy {
   takeProfitPercent = 6;
 
   loading = false;
+  loadingParameters = false;
   saving = false;
   errorMessage = '';
   successMessage = '';
@@ -79,7 +80,7 @@ export class AnalysisComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   loadSymbols(): void {
-    this.loading = true;
+    this.loadingParameters = true;
     this.errorMessage = '';
 
     this.marketService.getSymbols().pipe(
@@ -90,12 +91,14 @@ export class AnalysisComponent implements OnInit, AfterViewInit, OnDestroy {
         const requestedSymbol = this.activatedRoute.snapshot.queryParamMap.get('symbol')?.toUpperCase();
         this.selectedSymbol = requestedSymbol && this.symbols.includes(requestedSymbol)
           ? requestedSymbol
-          : this.symbols[0] ?? '';
+          : this.symbols.includes('BTCUSDT')
+            ? 'BTCUSDT'
+            : this.symbols[0] ?? '';
         this.loadRiskParameters(this.selectedSymbol);
         this.changeDetectorRef.detectChanges();
       },
       error: (error) => {
-        this.loading = false;
+        this.loadingParameters = false;
         this.errorMessage = error.error?.message || 'No se pudieron cargar los activos disponibles.';
         this.changeDetectorRef.detectChanges();
       }
@@ -108,8 +111,8 @@ export class AnalysisComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     this.loading = true;
+    this.resetAnalysisResult();
     this.errorMessage = '';
-    this.successMessage = '';
 
     this.analysisService.generateAnalysis(this.getRiskParametersRequest()).pipe(
       finalize(() => {
@@ -155,16 +158,11 @@ export class AnalysisComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   onAnalysisFilterChange(): void {
-    this.selectedMarketData = null;
-    this.selectedIndicator = null;
-    this.recommendation = null;
-    this.generateAnalysis();
+    this.resetAnalysisResult();
   }
 
   onSymbolChange(): void {
-    this.selectedMarketData = null;
-    this.selectedIndicator = null;
-    this.recommendation = null;
+    this.resetAnalysisResult();
     this.loadRiskParameters(this.selectedSymbol);
   }
 
@@ -213,6 +211,20 @@ export class AnalysisComponent implements OnInit, AfterViewInit, OnDestroy {
     return change > 1 ? 'COMPRAR' : 'ESPERAR';
   }
 
+  getRecommendationClass(): string {
+    const result = this.getRecommendationResult();
+
+    if (result === 'COMPRAR') {
+      return 'positive-text';
+    }
+
+    if (result === 'VENDER') {
+      return 'negative-text';
+    }
+
+    return 'warning-text';
+  }
+
   getRiskLevel(): string {
     if (this.recommendation) {
       return this.recommendation.riskLevel;
@@ -231,7 +243,7 @@ export class AnalysisComponent implements OnInit, AfterViewInit, OnDestroy {
 
   getRecommendationReason(): string {
     if (this.recommendation) {
-      return this.recommendation.reason;
+      return this.getDisplayReason(this.recommendation.reason);
     }
 
     const trend = this.selectedMarketData?.priceChangePercent ?? 0;
@@ -246,6 +258,12 @@ export class AnalysisComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     return 'No hay suficiente confirmacion direccional. Se recomienda observar antes de operar.';
+  }
+
+  getDisplayReason(reason: string): string {
+    return reason
+      .replace(/TensorFlow\.js proyecto/gi, 'El modelo predictivo recomienda')
+      .replace(/tensorflow-js-dense-v1/gi, 'Modelo DSS v1');
   }
 
   getConfidencePercent(): number {
@@ -269,12 +287,12 @@ export class AnalysisComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
-    this.loading = true;
+    this.loadingParameters = true;
     this.errorMessage = '';
 
     this.analysisService.getRiskParameters(symbol).pipe(
       finalize(() => {
-        this.loading = false;
+        this.loadingParameters = false;
         this.changeDetectorRef.detectChanges();
       }),
       takeUntil(this.destroy$)
@@ -286,12 +304,22 @@ export class AnalysisComponent implements OnInit, AfterViewInit, OnDestroy {
         this.maxRiskPercent = response.data.maxRiskPercent;
         this.stopLossPercent = response.data.stopLossPercent;
         this.takeProfitPercent = response.data.takeProfitPercent;
-        this.generateAnalysis();
       },
       error: (error) => {
         this.errorMessage = error.error?.message || 'No se pudieron cargar los parametros de riesgo.';
       }
     });
+  }
+
+  private resetAnalysisResult(): void {
+    this.selectedMarketData = null;
+    this.selectedIndicator = null;
+    this.recommendation = null;
+    this.successMessage = '';
+    this.chart?.remove();
+    this.chart = undefined;
+    this.candleSeries = undefined;
+    this.changeDetectorRef.detectChanges();
   }
 
   private loadHistoryChart(symbol: string): void {
@@ -364,6 +392,17 @@ export class AnalysisComponent implements OnInit, AfterViewInit, OnDestroy {
         secondsVisible: false,
         rightOffset: 8,
         barSpacing: 18
+      },
+      handleScale: {
+        mouseWheel: false,
+        pinch: true,
+        axisPressedMouseMove: false
+      },
+      handleScroll: {
+        mouseWheel: false,
+        pressedMouseMove: true,
+        horzTouchDrag: true,
+        vertTouchDrag: false
       },
       localization: {
         priceFormatter: (price: number) => price < 1 ? price.toFixed(6) : price.toFixed(2)

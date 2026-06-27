@@ -24,7 +24,22 @@
 }
 
 .chart-wrapper {
-  height: 290px;
+  flex: 1 1 auto;
+  min-height: 370px;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.chart-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.symbol-select {
+  width: 150px;
+  color: #e5eefc;
+  border-color: #34465f;
+  background-color: #081426;
 }
 
 .trading-chart {
@@ -39,4 +54,16 @@
 .chart-wrapper.chart-muted .trading-chart {
   filter: grayscale(1);
   opacity: 0.35;
+}
+
+@media (max-width: 1199.98px) {
+  .chart-wrapper {
+    min-height: 330px;
+  }
+}
+
+@media (max-width: 720px) {
+  .chart-wrapper {
+    min-height: 280px;
+  }
 }

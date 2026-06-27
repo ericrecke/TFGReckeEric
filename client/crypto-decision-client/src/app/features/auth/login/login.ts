@@ -27,7 +27,7 @@ export class LoginComponent {
     this.errorMessage = '';
 
     if (!this.email || !this.password) {
-      this.errorMessage = 'Email y contraseña son obligatorios.';
+      this.errorMessage = 'Email y contrasena son obligatorios.';
       return;
     }
 
@@ -46,7 +46,7 @@ export class LoginComponent {
         error: (error) => {
           this.loading = false;
           this.errorMessage =
-            error.error?.message || 'Error al iniciar sesión.';
+            error.error?.message || 'Error al iniciar sesion.';
         }
       });
   }

@@ -1,7 +1,7 @@
 <div class="dashboard-shell d-grid min-vh-100">
   <aside class="sidebar d-flex flex-column gap-4 p-3">
     <div class="d-flex align-items-center gap-2">
-      <div class="brand-mark">DS</div>
+      <img class="brand-logo" src="/dssLogo.png" alt="Logo DSS Trading">
       <div>
         <strong class="d-block text-white">DSS Trading</strong>
         <span class="text-secondary small">Soporte a decisiones</span>
@@ -124,18 +124,29 @@
 
     <section class="row g-3 mb-3">
       <article class="col-12 col-xl-8">
-        <div class="dashboard-card rounded-3 p-3 h-100">
+        <div class="dashboard-card chart-card rounded-3 p-3 h-100">
           <div class="d-flex justify-content-between gap-3 mb-3 flex-wrap">
             <div>
               <h2 class="h6 text-white mb-1">Grafico de precio {{ selectedChartSymbol }}</h2>
-              <p class="text-secondary mb-0">Historial guardado para el activo seleccionado</p>
+              <p class="text-secondary mb-0">Velas historicas del activo seleccionado</p>
             </div>
 
-            <div class="btn-group btn-group-sm" aria-label="Filtros de periodo">
-              <button class="btn" [class.btn-primary]="selectedChartPeriod === '1H'" [class.btn-outline-secondary]="selectedChartPeriod !== '1H'" type="button" (click)="setChartPeriod('1H')">1H</button>
-              <button class="btn" [class.btn-primary]="selectedChartPeriod === '4H'" [class.btn-outline-secondary]="selectedChartPeriod !== '4H'" type="button" (click)="setChartPeriod('4H')">4H</button>
-              <button class="btn" [class.btn-primary]="selectedChartPeriod === '1D'" [class.btn-outline-secondary]="selectedChartPeriod !== '1D'" type="button" (click)="setChartPeriod('1D')">1D</button>
-              <button class="btn" [class.btn-primary]="selectedChartPeriod === '1W'" [class.btn-outline-secondary]="selectedChartPeriod !== '1W'" type="button" (click)="setChartPeriod('1W')">1W</button>
+            <div class="d-flex gap-2 flex-wrap">
+              <select
+                class="form-select form-select-sm symbol-select"
+                aria-label="Seleccionar activo"
+                [ngModel]="selectedChartSymbol"
+                (ngModelChange)="selectSymbol($event)"
+              >
+                <option *ngFor="let symbol of symbols" [value]="symbol">{{ symbol }}</option>
+              </select>
+
+              <div class="btn-group btn-group-sm" aria-label="Filtros de periodo">
+                <button class="btn" [class.btn-primary]="selectedChartPeriod === '1H'" [class.btn-outline-secondary]="selectedChartPeriod !== '1H'" type="button" (click)="setChartPeriod('1H')">1H</button>
+                <button class="btn" [class.btn-primary]="selectedChartPeriod === '4H'" [class.btn-outline-secondary]="selectedChartPeriod !== '4H'" type="button" (click)="setChartPeriod('4H')">4H</button>
+                <button class="btn" [class.btn-primary]="selectedChartPeriod === '1D'" [class.btn-outline-secondary]="selectedChartPeriod !== '1D'" type="button" (click)="setChartPeriod('1D')">1D</button>
+                <button class="btn" [class.btn-primary]="selectedChartPeriod === '1W'" [class.btn-outline-secondary]="selectedChartPeriod !== '1W'" type="button" (click)="setChartPeriod('1W')">1W</button>
+              </div>
             </div>
           </div>
 
@@ -242,43 +253,6 @@
           </section>
         </div>
       </aside>
-    </section>
-
-    <section class="dashboard-card rounded-3 p-3">
-      <div class="mb-3">
-        <h2 class="h6 text-white mb-1">Activos observados</h2>
-        <p class="text-secondary mb-0">Monedas configuradas para seguimiento inicial</p>
-      </div>
-
-      <div class="table-responsive">
-        <table class="table table-dark table-hover align-middle mb-0">
-          <thead>
-            <tr>
-              <th>Activo</th>
-              <th>Precio</th>
-              <th>Variacion 24h</th>
-              <th>Volumen 24h</th>
-              <th>Accion</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let item of getTableAssets()">
-              <td>{{ item.symbol }}</td>
-              <td>{{ item.price | number:'1.2-2' }}</td>
-              <td [class.positive-text]="isPositiveChange(item.priceChangePercent)"
-                [class.negative-text]="!isPositiveChange(item.priceChangePercent)">
-                {{ item.priceChangePercent | number:'1.2-2' }}%
-              </td>
-              <td>{{ item.volume | number:'1.0-2' }}</td>
-              <td>
-                <button type="button" class="btn btn-sm btn-primary fw-bold" (click)="openAnalysis(item.symbol)">
-                  Analizar
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
     </section>
   </main>
 </div>

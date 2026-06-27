@@ -59,11 +59,29 @@ export class AuthService {
 
   getCurrentUser(): AuthUser | null {
     const user = localStorage.getItem(this.userKey);
-    return user ? JSON.parse(user) : null;
+
+    if (!user) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(user);
+    } catch {
+      this.logout();
+      return null;
+    }
   }
 
   isAuthenticated(): boolean {
-    return !!this.getToken() || !!this.getRefreshToken();
+    return this.hasValidAccessToken() || this.hasValidRefreshToken();
+  }
+
+  hasValidAccessToken(): boolean {
+    return this.isTokenValid(this.getToken());
+  }
+
+  hasValidRefreshToken(): boolean {
+    return this.isTokenValid(this.getRefreshToken());
   }
 
   logout(): void {
@@ -76,5 +94,29 @@ export class AuthService {
     localStorage.setItem(this.tokenKey, response.token);
     localStorage.setItem(this.refreshTokenKey, response.refreshToken);
     localStorage.setItem(this.userKey, JSON.stringify(response.user));
+  }
+
+  private isTokenValid(token: string | null): boolean {
+    if (!token) {
+      return false;
+    }
+
+    try {
+      const payload = token.split('.')[1];
+
+      if (!payload) {
+        return false;
+      }
+
+      const normalizedPayload = payload
+        .replace(/-/g, '+')
+        .replace(/_/g, '/')
+        .padEnd(Math.ceil(payload.length / 4) * 4, '=');
+      const decoded = JSON.parse(atob(normalizedPayload)) as { exp?: number };
+
+      return typeof decoded.exp === 'number' && decoded.exp * 1000 > Date.now();
+    } catch {
+      return false;
+    }
   }
 }

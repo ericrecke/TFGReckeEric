@@ -14,7 +14,12 @@ export class RecommendationService {
 
   constructor(private http: HttpClient) {}
 
-  getRecommendations(filters?: { symbol?: string; type?: string }): Observable<RecommendationsResponse> {
+  getRecommendations(filters?: {
+    symbol?: string;
+    type?: string;
+    page?: number;
+    limit?: number;
+  }): Observable<RecommendationsResponse> {
     let params = new HttpParams();
 
     if (filters?.symbol) {
@@ -24,6 +29,10 @@ export class RecommendationService {
     if (filters?.type) {
       params = params.set('type', filters.type);
     }
+
+    params = params
+      .set('page', filters?.page ?? 1)
+      .set('limit', filters?.limit ?? 8);
 
     return this.http.get<RecommendationsResponse>(this.apiUrl, { params });
   }

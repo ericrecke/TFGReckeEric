@@ -1,22 +1,78 @@
-<main class="min-vh-100 bg-light d-flex align-items-center py-5">
-  <div class="container">
-    <div class="row justify-content-center">
-      <div class="col-12 col-sm-10 col-md-7 col-lg-5 col-xl-4">
-        <div class="card shadow-sm border-0">
-          <div class="card-body p-4 p-md-5">
-            <h1 class="h3 mb-2">Iniciar sesion</h1>
-            <p class="text-secondary mb-4">Accede al sistema de soporte a decisiones.</p>
+<main class="login-shell min-vh-100 d-flex align-items-center py-4 py-lg-5">
+  <div class="market-glow market-glow-one"></div>
+  <div class="market-glow market-glow-two"></div>
+
+  <div class="container position-relative">
+    <section class="login-frame overflow-hidden">
+      <div class="row g-0">
+        <div class="col-lg-7 d-none d-lg-flex">
+          <div class="login-intro d-flex flex-column justify-content-between w-100 p-5">
+            <div class="d-flex align-items-center gap-3">
+              <img class="brand-logo" src="/dssLogo.png" alt="Logo DSS Trading">
+              <div>
+                <strong class="d-block text-white">DSS Trading</strong>
+                <span class="intro-muted small">Soporte inteligente para tus decisiones</span>
+              </div>
+            </div>
+
+            <div class="intro-copy">
+              <span class="eyebrow">Mercado y analisis en un solo lugar</span>
+              <h1>Decisiones respaldadas por datos, no por impulsos.</h1>
+              <p>
+                Segui precios, indicadores tecnicos y recomendaciones orientativas
+                con parametros de riesgo definidos por vos.
+              </p>
+
+              <div class="market-signal mt-4" aria-hidden="true">
+                <span class="signal-bar bar-1"></span>
+                <span class="signal-bar bar-2"></span>
+                <span class="signal-bar bar-3"></span>
+                <span class="signal-bar bar-4"></span>
+                <span class="signal-bar bar-5"></span>
+                <span class="signal-line"></span>
+              </div>
+            </div>
+
+            <div class="d-flex gap-4">
+              <div>
+                <strong class="status-value">24/7</strong>
+                <span class="d-block intro-muted small">Datos de mercado</span>
+              </div>
+              <div>
+                <strong class="status-value positive">OHLC</strong>
+                <span class="d-block intro-muted small">Velas historicas</span>
+              </div>
+              <div>
+                <strong class="status-value">DSS</strong>
+                <span class="d-block intro-muted small">Soporte, no automatizacion</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12 col-lg-5">
+          <div class="login-panel d-flex flex-column justify-content-center h-100 p-4 p-sm-5">
+            <div class="d-flex d-lg-none align-items-center gap-2 mb-5">
+              <img class="brand-logo" src="/dssLogo.png" alt="Logo DSS Trading">
+              <strong class="text-white">DSS Trading</strong>
+            </div>
+
+            <span class="eyebrow mb-2">Acceso seguro</span>
+            <h2 class="text-white mb-2">Iniciar sesion</h2>
+            <p class="login-muted mb-4">Ingresa tus datos para acceder al panel de mercado.</p>
 
             <form (ngSubmit)="login()" class="d-grid gap-3">
               <div>
                 <label for="email" class="form-label">Email</label>
                 <input
                   id="email"
-                  class="form-control"
+                  class="form-control login-control"
                   type="email"
                   [(ngModel)]="email"
                   name="email"
-                  placeholder="Ingrese su email"
+                  placeholder="usuario@email.com"
+                  autocomplete="email"
+                  required
                 />
               </div>
 
@@ -24,30 +80,36 @@
                 <label for="password" class="form-label">Contrasena</label>
                 <input
                   id="password"
-                  class="form-control"
+                  class="form-control login-control"
                   type="password"
                   [(ngModel)]="password"
                   name="password"
-                  placeholder="Ingrese su contrasena"
+                  placeholder="Ingresa tu contrasena"
+                  autocomplete="current-password"
+                  required
                 />
               </div>
 
-              <div class="alert alert-danger mb-0" *ngIf="errorMessage">
+              <div class="alert alert-danger mb-0 py-2" *ngIf="errorMessage">
                 {{ errorMessage }}
               </div>
 
-              <button type="submit" class="btn btn-primary w-100" [disabled]="loading">
-                {{ loading ? 'Ingresando...' : 'Ingresar' }}
+              <button type="submit" class="btn btn-primary login-button w-100 mt-1" [disabled]="loading">
+                <span class="spinner-border spinner-border-sm me-2" *ngIf="loading"></span>
+                {{ loading ? 'Ingresando...' : 'Ingresar al panel' }}
               </button>
             </form>
 
-            <p class="text-center text-secondary mt-4 mb-0">
-              No tenes cuenta?
-              <a routerLink="/register">Registrarse</a>
+            <div class="login-separator my-4"><span>Nuevo en DSS Trading</span></div>
+
+            <a class="btn btn-outline-light register-link" routerLink="/register">Crear una cuenta</a>
+
+            <p class="security-note text-center mb-0 mt-4">
+              Tus credenciales se transmiten de forma segura.
             </p>
           </div>
         </div>
       </div>
-    </div>
+    </section>
   </div>
 </main>

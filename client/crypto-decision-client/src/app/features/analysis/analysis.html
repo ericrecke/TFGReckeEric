@@ -1,7 +1,7 @@
 <div class="analysis-shell d-grid min-vh-100">
   <aside class="sidebar d-flex flex-column gap-4 p-3">
     <div class="d-flex align-items-center gap-2">
-      <div class="brand-mark">DS</div>
+      <img class="brand-logo" src="/dssLogo.png" alt="Logo DSS Trading">
       <div>
         <strong class="d-block text-white">DSS Trading</strong>
         <span class="text-secondary small">Soporte a decisiones</span>
@@ -70,8 +70,13 @@
         </div>
 
         <div class="col-12">
-          <button class="btn btn-primary fw-bold px-4" type="button" (click)="generateAnalysis()" [disabled]="loading">
-            {{ loading ? 'Generando...' : 'Generar analisis' }}
+          <button
+            class="btn btn-primary fw-bold px-4"
+            type="button"
+            (click)="generateAnalysis()"
+            [disabled]="loading || loadingParameters"
+          >
+            {{ loading ? 'Generando...' : loadingParameters ? 'Cargando parametros...' : 'Generar analisis' }}
           </button>
         </div>
       </div>
@@ -83,6 +88,10 @@
           <h2 class="h6 text-white mb-3">Grafico e indicadores</h2>
 
           <div class="chart-wrapper mb-3">
+            <div class="analysis-chart-state" *ngIf="loading || !selectedMarketData">
+              <span class="spinner-border spinner-border-sm" *ngIf="loading"></span>
+              {{ loading ? 'Analizando activo...' : 'Configure los parametros y presione Generar analisis' }}
+            </div>
             <div #analysisChart class="trading-chart"></div>
           </div>
 
@@ -165,13 +174,32 @@
       </aside>
     </section>
 
-    <section class="analysis-card rounded-3 p-3">
+    <section class="analysis-card rounded-3 p-3" *ngIf="recommendation; else noAnalysisResult">
       <div class="recommendation-layout">
-        <div class="recommendation-icon">!</div>
+        <div
+          class="recommendation-icon"
+          aria-hidden="true"
+          [class.decision-buy]="getRecommendationResult() === 'COMPRAR'"
+          [class.decision-hold]="getRecommendationResult() === 'ESPERAR'"
+          [class.decision-sell]="getRecommendationResult() === 'VENDER'"
+          [ngSwitch]="getRecommendationResult()"
+        >
+          <svg *ngSwitchCase="'COMPRAR'" viewBox="0 0 24 24">
+            <path d="M5 17 17 5M9 5h8v8"></path>
+          </svg>
+          <svg *ngSwitchCase="'VENDER'" viewBox="0 0 24 24">
+            <path d="m5 7 12 12M9 19h8v-8"></path>
+          </svg>
+          <svg *ngSwitchDefault viewBox="0 0 24 24">
+            <path d="M9 7v10M15 7v10"></path>
+          </svg>
+        </div>
 
         <div>
           <span class="text-secondary small">Resultado</span>
-          <h2 class="recommendation-title mb-1">{{ getRecommendationResult() }}</h2>
+          <h2 class="recommendation-title mb-1" [ngClass]="getRecommendationClass()">
+            {{ getRecommendationResult() }}
+          </h2>
           <span class="text-secondary small">Nivel de confianza</span>
           <div class="progress confidence-bar mt-1">
             <div class="progress-bar bg-success" [style.width.%]="getConfidencePercent()">
@@ -188,8 +216,8 @@
         <div>
           <span class="text-secondary small">Motivo</span>
           <p class="mb-0 text-light">{{ getRecommendationReason() }}</p>
-          <small class="d-block text-secondary mt-2" *ngIf="recommendation?.machineLearning as ml">
-            Modelo {{ ml.model }}: {{ ml.predictedResult }} ({{ ml.confidencePercent }}%),
+          <small class="d-block text-secondary mt-2" *ngIf="recommendation.machineLearning as ml">
+            Modelo DSS v1: {{ ml.predictedResult }} ({{ ml.confidencePercent }}%),
             entrenado con {{ ml.trainingSamples }} muestras.
           </small>
         </div>
@@ -206,5 +234,15 @@
         Las recomendaciones son orientativas. La decision final corresponde al usuario.
       </p>
     </section>
+
+    <ng-template #noAnalysisResult>
+      <section class="analysis-card empty-result rounded-3 p-4 text-center">
+        <span class="empty-result-mark">DS</span>
+        <h2 class="h6 text-white mt-3 mb-1">Analisis pendiente</h2>
+        <p class="text-secondary mb-0">
+          Seleccione el activo, la temporalidad y la estrategia. El resultado se generara solamente al presionar Generar analisis.
+        </p>
+      </section>
+    </ng-template>
   </main>
 </div>

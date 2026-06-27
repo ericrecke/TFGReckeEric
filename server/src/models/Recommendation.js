@@ -44,6 +44,7 @@ const recommendationSchema = new mongoose.Schema(
         confidencePercent: { type: Number, required: true },
         riskLevel: { type: String, enum: ['Bajo', 'Medio', 'Alto'], required: true },
         reason: { type: String, required: true },
+        riskOverride: { type: Boolean, default: false },
         machineLearning: { type: machineLearningSchema, default: null },
         disclaimer: {
             type: String,

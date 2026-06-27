@@ -1,7 +1,7 @@
 <div class="recommendations-shell d-grid min-vh-100">
   <aside class="sidebar d-flex flex-column gap-4 p-3">
     <div class="d-flex align-items-center gap-2">
-      <div class="brand-mark">DS</div>
+      <img class="brand-logo" src="/dssLogo.png" alt="Logo DSS Trading">
       <div>
         <strong class="d-block text-white">DSS Trading</strong>
         <span class="text-secondary small">Soporte a decisiones</span>
@@ -47,7 +47,7 @@
       <article class="col-12 col-md-3">
         <div class="recommendation-card rounded-3 p-3 h-100">
           <span class="metric-label">Total evaluadas</span>
-          <strong class="metric-value">{{ recommendations.length }}</strong>
+          <strong class="metric-value">{{ totalRecommendations }}</strong>
           <small class="metric-label">Segun filtros actuales</small>
         </div>
       </article>
@@ -99,7 +99,7 @@
         </div>
 
         <div class="col-12 col-md-4 d-flex gap-2">
-          <button class="btn btn-primary fw-bold flex-fill" type="button" (click)="loadRecommendations()" [disabled]="loading">
+          <button class="btn btn-primary fw-bold flex-fill" type="button" (click)="applyFilters()" [disabled]="loading">
             {{ loading ? 'Cargando...' : 'Aplicar filtros' }}
           </button>
           <button class="btn btn-outline-secondary fw-bold" type="button" (click)="clearFilters()">Limpiar</button>
@@ -112,7 +112,7 @@
         <div class="recommendation-card rounded-3 p-3 h-100">
           <div class="d-flex justify-content-between align-items-center mb-3">
             <h2 class="h6 text-white mb-0">Recomendaciones generadas</h2>
-            <span class="text-secondary small">{{ recommendations.length }} resultados</span>
+            <span class="text-secondary small">{{ totalRecommendations }} resultados</span>
           </div>
 
           <div class="empty-state" *ngIf="!loading && !recommendations.length">
@@ -134,7 +134,7 @@
                 </div>
 
                 <div class="text-end">
-                  <span class="recommendation-type" [class]="getRecommendationClass(recommendation)">
+                  <span class="recommendation-type" [ngClass]="getRecommendationClass(recommendation)">
                     {{ getRecommendationResult(recommendation) }}
                   </span>
                   <small class="d-block text-secondary">{{ getConfidencePercent(recommendation) | number:'1.0-0' }}%</small>
@@ -142,6 +142,26 @@
               </div>
             </button>
           </div>
+
+          <nav class="pagination-bar d-flex align-items-center justify-content-between gap-2 mt-3" *ngIf="totalRecommendations">
+            <button
+              class="btn btn-sm btn-outline-secondary"
+              type="button"
+              (click)="goToPage(currentPage - 1)"
+              [disabled]="currentPage === 1 || loading"
+            >
+              Anterior
+            </button>
+            <span>Pagina {{ currentPage }} de {{ totalPages }}</span>
+            <button
+              class="btn btn-sm btn-outline-secondary"
+              type="button"
+              (click)="goToPage(currentPage + 1)"
+              [disabled]="currentPage === totalPages || loading"
+            >
+              Siguiente
+            </button>
+          </nav>
         </div>
       </article>
 
@@ -149,11 +169,28 @@
         <div class="recommendation-card result-panel rounded-3 p-3 h-100">
           <ng-container *ngIf="selectedRecommendation; else noSelection">
             <div class="recommendation-layout">
-              <div class="recommendation-icon">!</div>
+              <div
+                class="recommendation-icon"
+                aria-hidden="true"
+                [class.decision-buy]="getRecommendationResult(selectedRecommendation) === 'COMPRAR'"
+                [class.decision-hold]="getRecommendationResult(selectedRecommendation) === 'ESPERAR'"
+                [class.decision-sell]="getRecommendationResult(selectedRecommendation) === 'VENDER'"
+                [ngSwitch]="getRecommendationResult(selectedRecommendation)"
+              >
+                <svg *ngSwitchCase="'COMPRAR'" viewBox="0 0 24 24">
+                  <path d="M5 17 17 5M9 5h8v8"></path>
+                </svg>
+                <svg *ngSwitchCase="'VENDER'" viewBox="0 0 24 24">
+                  <path d="m5 7 12 12M9 19h8v-8"></path>
+                </svg>
+                <svg *ngSwitchDefault viewBox="0 0 24 24">
+                  <path d="M9 7v10M15 7v10"></path>
+                </svg>
+              </div>
 
               <div>
                 <span class="text-secondary small">Decision orientativa</span>
-                <h2 class="recommendation-title mb-1" [class]="getRecommendationClass(selectedRecommendation)">
+                <h2 class="recommendation-title mb-1" [ngClass]="getRecommendationClass(selectedRecommendation)">
                   {{ getRecommendationResult(selectedRecommendation) }}
                 </h2>
                 <span class="text-secondary small">Nivel de confianza</span>
@@ -176,18 +213,151 @@
               </div>
             </div>
 
-            <div class="mt-3">
-              <span class="text-secondary small">Motivo</span>
-              <p class="text-light mb-0">{{ selectedRecommendation.reason }}</p>
-              <small class="d-block text-secondary mt-2" *ngIf="selectedRecommendation.machineLearning as ml">
-                Modelo {{ ml.model }}: {{ ml.predictedResult }} ({{ ml.confidencePercent }}%),
-                entrenado con {{ ml.trainingSamples }} muestras.
-              </small>
-            </div>
+            <section class="explanation-box rounded-3 p-3 mt-3">
+              <span class="section-kicker">Explicacion principal</span>
+              <h3 class="h6 text-white mt-1 mb-2">
+                Por que se recomienda {{ getRecommendationResult(selectedRecommendation) | lowercase }}
+              </h3>
+              <p class="text-light mb-0">{{ getDisplayReason(selectedRecommendation.reason) }}</p>
+            </section>
+
+            <ng-container *ngIf="getAnalysisContext(selectedRecommendation) as analysis; else limitedContext">
+              <div class="row g-3 mt-0">
+                <section class="col-12 col-lg-4">
+                  <div class="evidence-card rounded-3 p-3 h-100">
+                    <span class="section-kicker">Evidencia tecnica</span>
+                    <h3 class="h6 text-white mt-1 mb-3">Indicadores utilizados</h3>
+
+                    <div class="detail-row">
+                      <span>Variacion 24h</span>
+                      <strong
+                        [class.positive-text]="(analysis.marketData?.priceChangePercent ?? 0) >= 0"
+                        [class.negative-text]="(analysis.marketData?.priceChangePercent ?? 0) < 0"
+                      >
+                        {{ analysis.marketData?.priceChangePercent | number:'1.2-2' }}%
+                      </strong>
+                    </div>
+                    <div class="detail-row">
+                      <span>RSI {{ analysis.indicator?.period || 14 }}</span>
+                      <strong>{{ analysis.indicator?.rsi ?? 'N/D' }} · {{ getRsiInterpretation(analysis.indicator?.rsi) }}</strong>
+                    </div>
+                    <div class="detail-row">
+                      <span>EMA vs. SMA</span>
+                      <strong>{{ getTrendInterpretation(selectedRecommendation) }}</strong>
+                    </div>
+                    <div class="detail-row">
+                      <span>MACD</span>
+                      <strong>{{ analysis.indicator?.macd ?? 'N/D' }} · {{ getMacdInterpretation(analysis.indicator?.macd) }}</strong>
+                    </div>
+                    <small class="data-source d-block mt-3">
+                      Fuente: {{ analysis.indicator?.source || 'No disponible' }}
+                    </small>
+                  </div>
+                </section>
+
+                <section class="col-12 col-lg-4">
+                  <div class="evidence-card rounded-3 p-3 h-100">
+                    <span class="section-kicker">Control de riesgo</span>
+                    <h3 class="h6 text-white mt-1 mb-3">Limites considerados</h3>
+
+                    <div class="detail-row">
+                      <span>Capital evaluado</span>
+                      <strong>{{ analysis.riskParameters.capital | number:'1.2-2' }} USDT</strong>
+                    </div>
+                    <div class="detail-row">
+                      <span>Riesgo maximo</span>
+                      <strong>{{ analysis.riskParameters.maxRiskPercent }}% · {{ getRiskAmount(selectedRecommendation) | number:'1.2-2' }} USDT</strong>
+                    </div>
+                    <div class="detail-row">
+                      <span>Stop loss</span>
+                      <strong>{{ analysis.riskParameters.stopLossPercent }}%</strong>
+                    </div>
+                    <div class="detail-row">
+                      <span>Take profit</span>
+                      <strong>{{ analysis.riskParameters.takeProfitPercent }}%</strong>
+                    </div>
+                    <div class="detail-row">
+                      <span>Beneficio / riesgo</span>
+                      <strong>{{ getRiskRewardRatio(selectedRecommendation) | number:'1.2-2' }} : 1</strong>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="col-12 col-lg-4">
+                  <div class="evidence-card rounded-3 p-3 h-100">
+                    <span class="section-kicker">Modelo predictivo</span>
+                    <h3 class="h6 text-white mt-1 mb-3">Evaluacion del modelo</h3>
+
+                    <ng-container *ngIf="selectedRecommendation.machineLearning as ml; else noModelData">
+                      <div class="d-flex justify-content-between align-items-end mb-3">
+                        <div>
+                          <span class="metric-caption">Prediccion</span>
+                          <strong class="model-decision d-block" [ngClass]="getDecisionClass(ml.predictedResult)">
+                            {{ ml.predictedResult }}
+                          </strong>
+                        </div>
+                        <strong class="text-white">{{ ml.confidencePercent }}%</strong>
+                      </div>
+
+                      <div class="probability-row">
+                        <span>Comprar</span>
+                        <div class="probability-track"><i class="buy" [style.width.%]="ml.probabilities.buy"></i></div>
+                        <strong>{{ ml.probabilities.buy | number:'1.0-1' }}%</strong>
+                      </div>
+                      <div class="probability-row">
+                        <span>Esperar</span>
+                        <div class="probability-track"><i class="hold" [style.width.%]="ml.probabilities.hold"></i></div>
+                        <strong>{{ ml.probabilities.hold | number:'1.0-1' }}%</strong>
+                      </div>
+                      <div class="probability-row">
+                        <span>Vender</span>
+                        <div class="probability-track"><i class="sell" [style.width.%]="ml.probabilities.sell"></i></div>
+                        <strong>{{ ml.probabilities.sell | number:'1.0-1' }}%</strong>
+                      </div>
+
+                      <small class="data-source d-block mt-3">
+                        Modelo DSS v1 · {{ ml.trainingSamples }} muestras historicas
+                      </small>
+                    </ng-container>
+
+                    <ng-template #noModelData>
+                      <p class="text-secondary small mb-0">
+                        Esta recomendacion no posee una prediccion del modelo almacenada.
+                      </p>
+                    </ng-template>
+                  </div>
+                </section>
+              </div>
+
+              <div class="context-strip d-flex gap-3 flex-wrap rounded-3 px-3 py-2 mt-3">
+                <span>Temporalidad <strong>{{ analysis.timeframe }}</strong></span>
+                <span>Estrategia <strong>{{ getStrategyLabel(analysis.strategy) }}</strong></span>
+                <span>Precio analizado <strong>{{ analysis.marketData?.price | number:'1.2-6' }} USDT</strong></span>
+                <span>Datos <strong>{{ analysis.marketData?.source || 'No disponible' }}</strong></span>
+              </div>
+            </ng-container>
+
+            <ng-template #limitedContext>
+              <div class="alert alert-warning mt-3 mb-0">
+                Esta recomendacion historica no tiene todos los datos del analisis asociados.
+              </div>
+            </ng-template>
+
+            <section class="guidance-box rounded-3 p-3 mt-3">
+              <span class="section-kicker">Que significa para el usuario</span>
+              <p class="text-light mb-0 mt-1">{{ getDecisionGuidance(selectedRecommendation) }}</p>
+            </section>
 
             <div class="d-flex gap-2 mt-3 flex-wrap">
-              <button class="btn btn-primary fw-bold" type="button">Registrar operacion</button>
-              <button class="btn btn-outline-primary fw-bold" type="button">Crear alerta</button>
+              <button
+                class="btn btn-primary fw-bold"
+                type="button"
+                (click)="registerOperation(selectedRecommendation)"
+                [disabled]="getRecommendationResult(selectedRecommendation) === 'ESPERAR'"
+              >
+                Registrar operacion
+              </button>
+              <button class="btn btn-outline-primary fw-bold" type="button" disabled>Crear alerta</button>
               <button class="btn btn-outline-secondary fw-bold" type="button" (click)="goToAnalysis(selectedRecommendation.symbol)">
                 Revisar analisis
               </button>

@@ -51,11 +51,13 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   private viewInitialized = false;
   private readonly refreshIntervalMs = 30000;
   private readonly liveRefreshIntervalMs = 5000;
-  private readonly fallbackSymbols = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'SOLUSDT'];
+  private readonly fallbackSymbols = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT', 'XRPUSDT'];
   private readonly destroy$ = new Subject<void>();
   private marketRefreshInProgress = false;
   private liveRefreshInProgress = false;
   private priceChartCandles: CandlePoint[] = [];
+  private selectedExternalMarketData?: MarketData;
+  private selectedExternalIndicator?: TechnicalIndicator;
 
   constructor(
     private authService: AuthService,
@@ -82,7 +84,23 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   loadSymbolsAndMarketData(): void {
+    this.loadSymbolCatalog();
     this.loadMarketData();
+  }
+
+  loadSymbolCatalog(): void {
+    this.marketService.getSymbols().pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (response) => {
+        this.symbols = response.symbols ?? [];
+        this.changeDetectorRef.detectChanges();
+      },
+      error: () => {
+        this.symbols = [...this.fallbackSymbols];
+        this.changeDetectorRef.detectChanges();
+      }
+    });
   }
 
   loadMarketData(): void {
@@ -103,10 +121,12 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
       })
     ).subscribe({
       next: (response) => {
-        this.symbols = response.symbols ?? [];
         this.marketData = response.data ?? [];
         this.indicators = response.indicators ?? [];
-        this.selectedChartSymbol = this.selectedChartSymbol || this.symbols[0] || '';
+        this.selectedChartSymbol =
+          this.selectedChartSymbol ||
+          response.symbols?.[0] ||
+          this.fallbackSymbols[0];
         this.lastUpdatedAt = new Date();
         this.loadPriceChart(this.selectedChartSymbol);
         this.changeDetectorRef.detectChanges();
@@ -138,13 +158,13 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     ).subscribe({
       next: (response) => {
         const liveData = response.data ?? [];
-        this.symbols = response.symbols ?? this.symbols;
         this.marketData = liveData.map((liveItem) => ({
           ...this.marketData.find((item) => item.symbol === liveItem.symbol),
           ...liveItem
         }));
         this.lastUpdatedAt = new Date();
         this.appendLivePriceToChart();
+        this.refreshSelectedExternalMarketData();
         this.changeDetectorRef.detectChanges();
       },
       error: () => {
@@ -158,27 +178,12 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
       return this.marketData;
     }
 
-    const symbols = this.symbols.length ? this.symbols : this.fallbackSymbols;
-
-    return symbols.map((symbol) => ({
+    return this.fallbackSymbols.map((symbol) => ({
       symbol,
       price: 0,
       priceChangePercent: 0,
       volume: 0
     }));
-  }
-
-  getTableAssets(): Array<Partial<MarketData> & { symbol: string }> {
-    if (this.marketData.length) {
-      return this.marketData;
-    }
-
-    return [{
-      symbol: '-',
-      price: 0,
-      priceChangePercent: 0,
-      volume: 0
-    }];
   }
 
   loadPriceChart(symbol: string): void {
@@ -285,6 +290,31 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     this.loadPriceChart(symbol);
+
+    if (this.marketData.some((item) => item.symbol === symbol)) {
+      this.selectedExternalMarketData = undefined;
+      this.selectedExternalIndicator = undefined;
+      return;
+    }
+
+    this.marketService.getMarketData(symbol).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (response) => {
+        if (this.selectedChartSymbol !== symbol) {
+          return;
+        }
+
+        this.selectedExternalMarketData = response.data;
+        this.selectedExternalIndicator = response.indicator;
+        this.changeDetectorRef.detectChanges();
+      },
+      error: (error) => {
+        this.errorMessage =
+          error.error?.message || 'No se pudo obtener el activo seleccionado.';
+        this.changeDetectorRef.detectChanges();
+      }
+    });
   }
 
   openAnalysis(symbol = this.selectedChartSymbol): void {
@@ -294,11 +324,17 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   getSelectedMarketData(): MarketData | undefined {
-    return this.marketData.find((item) => item.symbol === this.selectedChartSymbol);
+    return this.marketData.find((item) => item.symbol === this.selectedChartSymbol) ??
+      (this.selectedExternalMarketData?.symbol === this.selectedChartSymbol
+        ? this.selectedExternalMarketData
+        : undefined);
   }
 
   getSelectedIndicator(): TechnicalIndicator | undefined {
-    return this.getIndicator(this.selectedChartSymbol);
+    return this.getIndicator(this.selectedChartSymbol) ??
+      (this.selectedExternalIndicator?.symbol === this.selectedChartSymbol
+        ? this.selectedExternalIndicator
+        : undefined);
   }
 
   hasSelectedTechnicalMetrics(): boolean {
@@ -416,6 +452,17 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
         rightOffset: 8,
         barSpacing: 18
       },
+      handleScale: {
+        mouseWheel: false,
+        pinch: true,
+        axisPressedMouseMove: false
+      },
+      handleScroll: {
+        mouseWheel: false,
+        pressedMouseMove: true,
+        horzTouchDrag: true,
+        vertTouchDrag: false
+      },
       localization: {
         priceFormatter: (price: number) => price < 1 ? price.toFixed(6) : price.toFixed(2)
       }
@@ -431,6 +478,32 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     this.priceChart.timeScale().setVisibleLogicalRange({
       from: Math.max(0, chartData.length - 100),
       to: chartData.length + 5
+    });
+  }
+
+  private refreshSelectedExternalMarketData(): void {
+    const symbol = this.selectedChartSymbol;
+
+    if (!symbol || this.marketData.some((item) => item.symbol === symbol)) {
+      return;
+    }
+
+    this.marketService.getMarketLiveBySymbol(symbol).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (response) => {
+        if (this.selectedChartSymbol !== symbol) {
+          return;
+        }
+
+        this.selectedExternalMarketData = {
+          ...this.selectedExternalMarketData,
+          ...response.data
+        };
+        this.lastUpdatedAt = new Date();
+        this.appendLivePriceToChart();
+        this.changeDetectorRef.detectChanges();
+      }
     });
   }
 

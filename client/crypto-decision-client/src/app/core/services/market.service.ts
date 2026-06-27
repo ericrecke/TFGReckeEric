@@ -57,6 +57,15 @@ export class MarketService {
     );
   }
 
+  getMarketLiveBySymbol(symbol: string): Observable<MarketDataResponse> {
+    return this.http.get<MarketDataResponse>(
+      `${this.apiUrl}/live/${symbol}`,
+      {
+        headers: this.getAuthHeaders()
+      }
+    );
+  }
+
   getMarketHistory(symbol: string, period = '1H'): Observable<MarketHistoryResponse> {
     return this.http.get<MarketHistoryResponse>(
       `${this.apiUrl}/${symbol}/history`,
