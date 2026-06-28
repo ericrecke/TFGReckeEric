@@ -12,6 +12,12 @@ predictivo. No ejecuta operaciones automaticamente.
 - Mercado: API publica de Binance.
 - Analisis: `technicalindicators` y TensorFlow.js.
 
+## Documentacion tecnica
+
+- [Integracion con Binance](docs/api/binance.md)
+- [Indicadores tecnicos](docs/architecture/technical-analysis.md)
+- [Modelo predictivo DSS v1](docs/architecture/modelo-predictivo.md)
+
 ## Estructura
 
 ```text
