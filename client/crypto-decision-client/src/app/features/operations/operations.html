@@ -14,7 +14,6 @@
       <a class="nav-link" routerLink="/recommendations">Recomendaciones</a>
       <a class="nav-link active">Operaciones</a>
       <a class="nav-link" routerLink="/history">Historial</a>
-      <a class="nav-link">Configuracion</a>
     </nav>
 
     <div class="sidebar-user d-flex align-items-center gap-2 mt-auto pt-3">
@@ -40,29 +39,39 @@
     <div class="alert alert-success" *ngIf="successMessage">{{ successMessage }}</div>
 
     <section class="row g-3 mb-3">
-      <article class="col-12 col-md-4">
+      <article class="col-12 col-md-6 col-xl-3">
         <div class="operation-card rounded-3 p-3 h-100">
           <span class="metric-label">Operaciones abiertas</span>
           <strong class="metric-value">{{ getOpenCount() }}</strong>
-          <small class="metric-label">En seguimiento actual</small>
+          <small class="metric-label">{{ getClosedCount() }} cerradas</small>
         </div>
       </article>
 
-      <article class="col-12 col-md-4">
+      <article class="col-12 col-md-6 col-xl-3">
         <div class="operation-card rounded-3 p-3 h-100">
-          <span class="metric-label">Cerradas</span>
-          <strong class="metric-value">{{ getClosedCount() }}</strong>
-          <small class="metric-label">Con resultado registrado</small>
+          <span class="metric-label">Capital en operaciones abiertas</span>
+          <strong class="metric-value">{{ summary.investedCapitalOpen | number:'1.2-2' }}</strong>
+          <small class="metric-label">Valor de entrada en USDT</small>
         </div>
       </article>
 
-      <article class="col-12 col-md-4">
+      <article class="col-12 col-md-6 col-xl-3">
         <div class="operation-card rounded-3 p-3 h-100">
-          <span class="metric-label">Resultado total</span>
-          <strong class="metric-value" [class.positive-text]="isPositive(getTotalResult())" [class.negative-text]="!isPositive(getTotalResult())">
-            {{ getTotalResult() | number:'1.2-2' }}
+          <span class="metric-label">G/P no realizada</span>
+          <strong class="metric-value" [class.positive-text]="isPositive(summary.unrealizedResult)" [class.negative-text]="!isPositive(summary.unrealizedResult)">
+            {{ summary.unrealizedResult | number:'1.2-2' }}
           </strong>
-          <small class="metric-label">Realizado + estimado abierto</small>
+          <small class="metric-label">Evolucion actual de operaciones abiertas</small>
+        </div>
+      </article>
+
+      <article class="col-12 col-md-6 col-xl-3">
+        <div class="operation-card rounded-3 p-3 h-100">
+          <span class="metric-label">Resultado realizado</span>
+          <strong class="metric-value" [class.positive-text]="isPositive(summary.realizedResult)" [class.negative-text]="!isPositive(summary.realizedResult)">
+            {{ summary.realizedResult | number:'1.2-2' }}
+          </strong>
+          <small class="metric-label">Resultado final de operaciones cerradas</small>
         </div>
       </article>
     </section>
@@ -75,7 +84,11 @@
           <div class="row g-3">
             <div class="col-12 col-md-6">
               <label class="form-label text-secondary">Activo</label>
-              <select class="form-select form-select-dark" [(ngModel)]="formSymbol">
+              <select
+                class="form-select form-select-dark"
+                [(ngModel)]="formSymbol"
+                (ngModelChange)="onFormSymbolChange($event)"
+              >
                 <option *ngFor="let symbol of symbols" [value]="symbol">{{ symbol }}</option>
               </select>
             </div>
@@ -90,7 +103,23 @@
 
             <div class="col-12 col-md-6">
               <label class="form-label text-secondary">Precio entrada</label>
-              <input class="form-control form-control-dark" type="number" min="0" [(ngModel)]="entryPrice">
+              <div class="price-input-wrapper" [class.price-loading]="loadingEntryPrice">
+                <input
+                  class="form-control form-control-dark"
+                  type="number"
+                  min="0"
+                  [(ngModel)]="entryPrice"
+                  [disabled]="loadingEntryPrice"
+                >
+                <span
+                  class="spinner-border spinner-border-sm price-spinner"
+                  aria-hidden="true"
+                  *ngIf="loadingEntryPrice"
+                ></span>
+              </div>
+              <small class="text-secondary d-block mt-1">
+                {{ loadingEntryPrice ? 'Consultando precio actual...' : 'Precio actual sugerido. Puede modificarlo.' }}
+              </small>
             </div>
 
             <div class="col-12 col-md-6">
@@ -99,7 +128,12 @@
             </div>
 
             <div class="col-12">
-              <button class="btn btn-primary fw-bold w-100" type="button" (click)="createOperation()" [disabled]="saving">
+              <button
+                class="btn btn-primary fw-bold w-100"
+                type="button"
+                (click)="createOperation()"
+                [disabled]="saving || loadingEntryPrice"
+              >
                 {{ saving ? 'Registrando...' : 'Registrar operacion' }}
               </button>
             </div>
@@ -144,7 +178,10 @@
         <div class="operation-card rounded-3 p-3 h-100">
           <div class="d-flex justify-content-between align-items-center mb-3">
             <h2 class="h6 text-white mb-0">Operaciones registradas</h2>
-            <span class="text-secondary small">{{ operations.length }} resultados</span>
+            <div class="text-end">
+              <span class="live-indicator d-block">Seguimiento cada 5s</span>
+              <small class="text-secondary">{{ operations.length }} resultados</small>
+            </div>
           </div>
 
           <div class="empty-state" *ngIf="!loading && !operations.length">
@@ -159,8 +196,9 @@
                   <th>Tipo</th>
                   <th>Entrada</th>
                   <th>Actual/Salida</th>
+                  <th>Variacion</th>
+                  <th>G/P USDT</th>
                   <th>Estado</th>
-                  <th>Resultado</th>
                 </tr>
               </thead>
               <tbody>
@@ -173,10 +211,13 @@
                   <td class="text-capitalize">{{ operation.operationType }}</td>
                   <td>{{ operation.entryPrice | number:'1.2-2' }}</td>
                   <td>{{ (operation.exitPrice ?? operation.currentPrice) | number:'1.2-2' }}</td>
-                  <td>{{ getStatusLabel(operation.status) }}</td>
+                  <td [class.positive-text]="isPositive(getOperationResult(operation))" [class.negative-text]="!isPositive(getOperationResult(operation))">
+                    {{ getOperationResultPercent(operation) | number:'1.2-2' }}%
+                  </td>
                   <td [class.positive-text]="isPositive(getOperationResult(operation))" [class.negative-text]="!isPositive(getOperationResult(operation))">
                     {{ getOperationResult(operation) | number:'1.2-2' }}
                   </td>
+                  <td>{{ getStatusLabel(operation.status) }}</td>
                 </tr>
               </tbody>
             </table>
@@ -188,33 +229,58 @@
         <div class="operation-card rounded-3 p-3 h-100">
           <ng-container *ngIf="selectedOperation; else noSelection">
             <span class="text-secondary small">Operacion seleccionada</span>
-            <h2 class="operation-title text-white mb-3">{{ selectedOperation.symbol }}</h2>
+            <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+              <h2 class="operation-title text-white mb-0">{{ selectedOperation.symbol }}</h2>
+              <span class="status-badge" [class.closed]="selectedOperation.status === 'cerrada'">
+                {{ getStatusLabel(selectedOperation.status) }}
+              </span>
+            </div>
+
+            <div
+              class="performance-panel rounded-3 p-3 mb-3"
+              [class.profit]="isPositive(getOperationResult(selectedOperation))"
+              [class.loss]="!isPositive(getOperationResult(selectedOperation))"
+            >
+              <span>{{ getResultLabel(selectedOperation) }}</span>
+              <div class="d-flex align-items-end justify-content-between gap-3 mt-1">
+                <strong>{{ getOperationResult(selectedOperation) | number:'1.2-2' }} USDT</strong>
+                <b>{{ getOperationResultPercent(selectedOperation) | number:'1.2-2' }}%</b>
+              </div>
+            </div>
 
             <div class="detail-grid">
-              <div>
+              <div class="comparison-entry">
                 <span>Tipo</span>
                 <strong class="text-capitalize">{{ selectedOperation.operationType }}</strong>
               </div>
               <div>
-                <span>Estado</span>
-                <strong>{{ getStatusLabel(selectedOperation.status) }}</strong>
+                <span>Tiempo transcurrido</span>
+                <strong>{{ getHoldingTime(selectedOperation) }}</strong>
               </div>
               <div>
-                <span>Entrada</span>
+                <span>Precio de entrada</span>
                 <strong>{{ selectedOperation.entryPrice | number:'1.2-2' }}</strong>
               </div>
               <div>
-                <span>Precio actual</span>
-                <strong>{{ selectedOperation.currentPrice ?? selectedOperation.exitPrice ?? 'N/D' }}</strong>
+                <span>{{ selectedOperation.status === 'cerrada' ? 'Precio de salida' : 'Precio actual' }}</span>
+                <strong>{{ selectedOperation.referencePrice ?? selectedOperation.exitPrice ?? selectedOperation.currentPrice ?? 'N/D' }}</strong>
               </div>
               <div>
                 <span>Cantidad</span>
                 <strong>{{ selectedOperation.amount | number:'1.0-6' }}</strong>
               </div>
               <div>
-                <span>Resultado</span>
-                <strong [class.positive-text]="isPositive(getOperationResult(selectedOperation))" [class.negative-text]="!isPositive(getOperationResult(selectedOperation))">
-                  {{ getOperationResult(selectedOperation) | number:'1.2-2' }}
+                <span>Capital inicial</span>
+                <strong>{{ selectedOperation.investedAmount | number:'1.2-2' }} USDT</strong>
+              </div>
+              <div>
+                <span>Valor al precio de referencia</span>
+                <strong>{{ selectedOperation.positionValue | number:'1.2-2' }} USDT</strong>
+              </div>
+              <div>
+                <span>Movimiento del precio</span>
+                <strong [class.positive-text]="isPositive(selectedOperation.priceVariationPercent ?? 0)" [class.negative-text]="!isPositive(selectedOperation.priceVariationPercent ?? 0)">
+                  {{ selectedOperation.priceVariationPercent | number:'1.2-2' }}%
                 </strong>
               </div>
             </div>

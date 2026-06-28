@@ -13,6 +13,14 @@ export interface Operation {
   result: number | null;
   currentPrice?: number | null;
   currentResult?: number | null;
+  investedAmount?: number;
+  referencePrice?: number | null;
+  positionValue?: number | null;
+  profitLoss?: number | null;
+  profitLossPercent?: number | null;
+  priceVariationPercent?: number | null;
+  resultType?: 'realized' | 'unrealized';
+  holdingTimeMs?: number;
   createdAt: string;
   updatedAt: string;
   closedAt: string | null;
@@ -33,6 +41,15 @@ export interface OperationsResponse {
   message: string;
   count: number;
   data: Operation[];
+  summary: {
+    openCount: number;
+    closedCount: number;
+    investedCapitalOpen: number;
+    unrealizedResult: number;
+    realizedResult: number;
+    totalResult: number;
+    updatedAt: string;
+  };
 }
 
 export interface OperationResponse {

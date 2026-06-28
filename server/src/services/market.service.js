@@ -3,7 +3,6 @@ const MarketSymbol = require('../models/MarketSymbol');
 
 const BINANCE_BASE_URL = process.env.BINANCE_BASE_URL || 'https://api.binance.com';
 const SYMBOL_SYNC_INTERVAL_MS = 6 * 60 * 60 * 1000;
-const watchlistSymbols = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT', 'XRPUSDT'];
 const popularSymbols = [
     'BTCUSDT',
     'ETHUSDT',
@@ -180,6 +179,22 @@ const getAllowedSymbols = async () => {
     return symbols.map((item) => item.symbol);
 }
 
+const getFeaturedSymbols = async (limit = 5) => {
+    await ensureSymbolCatalog();
+
+    const symbols = await MarketSymbol.find({
+        quoteAsset: 'USDT',
+        status: 'TRADING',
+        isSpotTradingAllowed: true
+    })
+        .sort({ popularityRank: 1, quoteVolume24h: -1 })
+        .limit(limit)
+        .select({ symbol: 1, _id: 0 })
+        .lean();
+
+    return symbols.map((item) => item.symbol);
+};
+
 const getTicker24h = async (symbol) => {
     const normalizedSymbol = await validateAllowedSymbol(symbol);
 
@@ -216,9 +231,42 @@ const mapTickerResponse = (ticker) => ({
 });
 
 const getAllowedTickers24h = async () => {
+    const featuredSymbols = await getFeaturedSymbols(5);
+
+    if (!featuredSymbols.length) {
+        throw new Error('No active market symbols are available');
+    }
+
     const response = await axios.get(`${BINANCE_BASE_URL}/api/v3/ticker/24hr`, {
         params: {
-            symbols: JSON.stringify(watchlistSymbols)
+            symbols: JSON.stringify(featuredSymbols)
+        },
+        timeout: 10000
+    });
+
+    const tickerBySymbol = new Map(
+        response.data.map((ticker) => [ticker.symbol, mapTickerResponse(ticker)])
+    );
+
+    return featuredSymbols
+        .map((symbol) => tickerBySymbol.get(symbol))
+        .filter(Boolean);
+};
+
+const getTickers24h = async (symbols) => {
+    const normalizedSymbols = [...new Set(
+        symbols
+            .map(normalizeSymbol)
+            .filter(Boolean)
+    )];
+
+    if (!normalizedSymbols.length) {
+        return [];
+    }
+
+    const response = await axios.get(`${BINANCE_BASE_URL}/api/v3/ticker/24hr`, {
+        params: {
+            symbols: JSON.stringify(normalizedSymbols)
         },
         timeout: 10000
     });
@@ -265,8 +313,10 @@ const getCandles = async (symbol, period = '1H', limit = 1000) => {
 
 module.exports = {
     getAllowedSymbols,
+    getFeaturedSymbols,
     getTicker24h,
     getAllowedTickers24h,
+    getTickers24h,
     getCandles,
     syncSymbolCatalog
 };

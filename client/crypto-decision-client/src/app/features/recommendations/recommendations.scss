@@ -278,6 +278,34 @@
   padding: 12px;
 }
 
+.compact-empty {
+  line-height: 1.55;
+}
+
+.empty-recommendation {
+  min-height: 430px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 32px;
+  text-align: center;
+}
+
+.empty-recommendation p {
+  max-width: 540px;
+  line-height: 1.65;
+}
+
+.empty-recommendation-logo {
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
+  margin-bottom: 4px;
+  filter: drop-shadow(0 8px 18px rgba(13, 110, 253, 0.28));
+}
+
 .positive-text {
   color: #22c55e !important;
 }

@@ -1,8 +1,8 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { finalize } from 'rxjs';
+import { finalize, interval, Subject, takeUntil } from 'rxjs';
 
 import { AuthService } from '../../core/services/auth.service';
 import { MarketService } from '../../core/services/market.service';
@@ -17,7 +17,7 @@ import { Operation, OperationStatus, OperationType } from '../../shared/models/o
   templateUrl: './operations.html',
   styleUrl: './operations.scss'
 })
-export class OperationsComponent implements OnInit {
+export class OperationsComponent implements OnInit, OnDestroy {
   user: AuthUser | null = null;
   symbols: string[] = [];
   operations: Operation[] = [];
@@ -32,11 +32,25 @@ export class OperationsComponent implements OnInit {
   exitPrice = 0;
 
   loading = false;
+  loadingEntryPrice = false;
   saving = false;
   closing = false;
   errorMessage = '';
   successMessage = '';
-  private hasPrefilledForm = false;
+  summary = {
+    openCount: 0,
+    closedCount: 0,
+    investedCapitalOpen: 0,
+    unrealizedResult: 0,
+    realizedResult: 0,
+    totalResult: 0,
+    updatedAt: ''
+  };
+  private readonly destroy$ = new Subject<void>();
+  private refreshInProgress = false;
+  private hasPrefilledSymbol = false;
+  private hasPrefilledEntryPrice = false;
+  private entryPriceRequestSymbol = '';
 
   constructor(
     private authService: AuthService,
@@ -53,14 +67,27 @@ export class OperationsComponent implements OnInit {
     this.applyPrefillFromRoute();
     this.loadSymbols();
     this.loadOperations();
+    interval(5000).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(() => this.loadOperations(true));
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   loadSymbols(): void {
     this.marketService.getSymbols().subscribe({
       next: (response) => {
         this.symbols = response.symbols ?? [];
-        if (!this.hasPrefilledForm) {
+        if (!this.hasPrefilledSymbol || !this.symbols.includes(this.formSymbol)) {
           this.formSymbol = this.symbols[0] ?? '';
+          this.hasPrefilledEntryPrice = false;
+        }
+
+        if (!this.hasPrefilledEntryPrice) {
+          this.loadCurrentEntryPrice(this.formSymbol);
         }
         this.changeDetectorRef.detectChanges();
       },
@@ -70,22 +97,38 @@ export class OperationsComponent implements OnInit {
     });
   }
 
-  loadOperations(): void {
-    this.loading = true;
-    this.errorMessage = '';
+  loadOperations(silent = false): void {
+    if (this.refreshInProgress) {
+      if (!silent) {
+        setTimeout(() => this.loadOperations(), 300);
+      }
+      return;
+    }
+
+    this.refreshInProgress = true;
+    this.loading = !silent;
+    if (!silent) {
+      this.errorMessage = '';
+    }
 
     this.operationService.getOperations({
       symbol: this.selectedSymbol,
       status: this.selectedStatus
     }).pipe(
       finalize(() => {
+        this.refreshInProgress = false;
         this.loading = false;
         this.changeDetectorRef.detectChanges();
       })
     ).subscribe({
       next: (response) => {
+        const selectedId = this.selectedOperation?._id;
         this.operations = response.data;
-        this.selectedOperation = this.operations[0] ?? null;
+        this.summary = response.summary;
+        this.selectedOperation =
+          this.operations.find((operation) => operation._id === selectedId) ??
+          this.operations[0] ??
+          null;
         this.changeDetectorRef.detectChanges();
       },
       error: (error) => {
@@ -118,9 +161,9 @@ export class OperationsComponent implements OnInit {
     ).subscribe({
       next: () => {
         this.successMessage = 'Operacion registrada correctamente.';
-        this.entryPrice = 0;
         this.amount = 0;
         this.selectedStatus = 'abierta';
+        this.loadCurrentEntryPrice(this.formSymbol);
         this.loadOperations();
       },
       error: (error) => {
@@ -166,6 +209,11 @@ export class OperationsComponent implements OnInit {
     this.loadOperations();
   }
 
+  onFormSymbolChange(symbol: string): void {
+    this.formSymbol = symbol;
+    this.loadCurrentEntryPrice(symbol);
+  }
+
   selectOperation(operation: Operation): void {
     this.selectedOperation = operation;
     this.exitPrice = operation.currentPrice ?? operation.exitPrice ?? 0;
@@ -178,19 +226,53 @@ export class OperationsComponent implements OnInit {
   }
 
   getOpenCount(): number {
-    return this.operations.filter((item) => item.status !== 'cerrada').length;
+    return this.summary.openCount;
   }
 
   getClosedCount(): number {
-    return this.operations.filter((item) => item.status === 'cerrada').length;
+    return this.summary.closedCount;
   }
 
   getTotalResult(): number {
-    return this.operations.reduce((total, item) => total + this.getOperationResult(item), 0);
+    return this.summary.totalResult;
   }
 
   getOperationResult(operation: Operation): number {
-    return operation.result ?? operation.currentResult ?? 0;
+    return operation.profitLoss ?? operation.result ?? operation.currentResult ?? 0;
+  }
+
+  getOperationResultPercent(operation: Operation): number {
+    return operation.profitLossPercent ?? 0;
+  }
+
+  getResultLabel(operation: Operation): string {
+    if (operation.status === 'cerrada') {
+      return this.getOperationResult(operation) >= 0
+        ? 'Ganancia realizada'
+        : 'Perdida realizada';
+    }
+
+    return this.getOperationResult(operation) >= 0
+      ? 'Ganancia no realizada'
+      : 'Perdida no realizada';
+  }
+
+  getHoldingTime(operation: Operation): string {
+    const milliseconds = operation.holdingTimeMs ?? 0;
+    const totalMinutes = Math.floor(milliseconds / 60000);
+    const days = Math.floor(totalMinutes / 1440);
+    const hours = Math.floor((totalMinutes % 1440) / 60);
+    const minutes = totalMinutes % 60;
+
+    if (days > 0) {
+      return `${days}d ${hours}h`;
+    }
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+
+    return `${minutes}m`;
   }
 
   getStatusLabel(status: OperationStatus): string {
@@ -211,22 +293,58 @@ export class OperationsComponent implements OnInit {
     if (symbol) {
       this.formSymbol = symbol;
       this.selectedSymbol = symbol;
-      this.hasPrefilledForm = true;
+      this.hasPrefilledSymbol = true;
     }
 
     if (operationType === 'compra' || operationType === 'venta') {
       this.operationType = operationType;
-      this.hasPrefilledForm = true;
     }
 
     if (entryPrice > 0) {
       this.entryPrice = Number(entryPrice.toFixed(8));
-      this.hasPrefilledForm = true;
+      this.hasPrefilledEntryPrice = true;
     }
 
     if (amount > 0) {
       this.amount = Number(amount.toFixed(8));
-      this.hasPrefilledForm = true;
     }
+  }
+
+  private loadCurrentEntryPrice(symbol: string): void {
+    if (!symbol) {
+      this.entryPrice = 0;
+      return;
+    }
+
+    this.entryPriceRequestSymbol = symbol;
+    this.loadingEntryPrice = true;
+    this.entryPrice = 0;
+
+    this.marketService.getMarketLiveBySymbol(symbol).pipe(
+      finalize(() => {
+        if (this.entryPriceRequestSymbol === symbol) {
+          this.loadingEntryPrice = false;
+          this.changeDetectorRef.detectChanges();
+        }
+      })
+    ).subscribe({
+      next: (response) => {
+        if (this.formSymbol !== symbol) {
+          return;
+        }
+
+        this.entryPrice = Number(response.data.price.toFixed(8));
+        this.changeDetectorRef.detectChanges();
+      },
+      error: (error) => {
+        if (this.formSymbol !== symbol) {
+          return;
+        }
+
+        this.errorMessage =
+          error.error?.message || 'No se pudo obtener el precio actual del activo.';
+        this.changeDetectorRef.detectChanges();
+      }
+    });
   }
 }

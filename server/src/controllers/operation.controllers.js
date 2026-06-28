@@ -13,28 +13,60 @@ const calculateResult = ({ operationType, entryPrice, exitPrice, amount }) => {
     return (exit - entry) * quantity;
 };
 
-const enrichOperation = async (operation) => {
+const buildOperationMetrics = (data, referencePrice, resultType) => {
+    const entryPrice = Number(data.entryPrice);
+    const amount = Number(data.amount);
+    const investedAmount = entryPrice * amount;
+    const profitLoss = referencePrice === null
+        ? null
+        : calculateResult({
+            operationType: data.operationType,
+            entryPrice,
+            exitPrice: referencePrice,
+            amount
+        });
+    const profitLossPercent = profitLoss === null || investedAmount === 0
+        ? null
+        : (profitLoss / investedAmount) * 100;
+    const priceVariationPercent = referencePrice === null || entryPrice === 0
+        ? null
+        : ((referencePrice - entryPrice) / entryPrice) * 100;
+    const endTime = data.closedAt ? new Date(data.closedAt).getTime() : Date.now();
+
+    return {
+        investedAmount,
+        referencePrice,
+        positionValue: referencePrice === null ? null : referencePrice * amount,
+        profitLoss,
+        profitLossPercent,
+        priceVariationPercent,
+        resultType,
+        holdingTimeMs: Math.max(0, endTime - new Date(data.createdAt).getTime())
+    };
+};
+
+const enrichOperation = (operation, tickerBySymbol) => {
     const data = operation.toObject();
 
     if (data.status === 'cerrada') {
-        return data;
+        const metrics = buildOperationMetrics(data, Number(data.exitPrice), 'realized');
+        return {
+            ...data,
+            ...metrics,
+            result: data.result ?? metrics.profitLoss
+        };
     }
 
-    try {
-        const ticker = await marketService.getTicker24h(data.symbol);
-        data.currentPrice = ticker.price;
-        data.currentResult = calculateResult({
-            operationType: data.operationType,
-            entryPrice: data.entryPrice,
-            exitPrice: ticker.price,
-            amount: data.amount
-        });
-    } catch (error) {
-        data.currentPrice = null;
-        data.currentResult = null;
-    }
+    const ticker = tickerBySymbol.get(data.symbol);
+    const currentPrice = ticker?.price ?? null;
+    const metrics = buildOperationMetrics(data, currentPrice, 'unrealized');
 
-    return data;
+    return {
+        ...data,
+        ...metrics,
+        currentPrice,
+        currentResult: metrics.profitLoss
+    };
 };
 
 const getOperations = async (req, res) => {
@@ -67,12 +99,53 @@ const getOperations = async (req, res) => {
         }
 
         const operations = await Operation.find(filters).sort({ createdAt: -1 });
-        const data = await Promise.all(operations.map(enrichOperation));
+        const openSymbols = operations
+            .filter((operation) => operation.status !== 'cerrada')
+            .map((operation) => operation.symbol);
+        let tickerBySymbol = new Map();
+
+        if (openSymbols.length) {
+            try {
+                const tickers = await marketService.getTickers24h(openSymbols);
+                tickerBySymbol = new Map(
+                    tickers.map((ticker) => [ticker.symbol, ticker])
+                );
+            } catch (error) {
+                console.error('Error refreshing operation prices:', error.message);
+            }
+        }
+
+        const data = operations.map((operation) => {
+            return enrichOperation(operation, tickerBySymbol);
+        });
+        const summary = data.reduce((totals, operation) => {
+            if (operation.status === 'cerrada') {
+                totals.closedCount += 1;
+                totals.realizedResult += operation.profitLoss ?? 0;
+            } else {
+                totals.openCount += 1;
+                totals.investedCapitalOpen += operation.investedAmount ?? 0;
+                totals.unrealizedResult += operation.profitLoss ?? 0;
+            }
+
+            return totals;
+        }, {
+            openCount: 0,
+            closedCount: 0,
+            investedCapitalOpen: 0,
+            unrealizedResult: 0,
+            realizedResult: 0
+        });
 
         return res.json({
             message: 'Operations fetched successfully',
             count: data.length,
-            data
+            data,
+            summary: {
+                ...summary,
+                totalResult: summary.realizedResult + summary.unrealizedResult,
+                updatedAt: new Date()
+            }
         });
     } catch (error) {
         return res.status(500).json({

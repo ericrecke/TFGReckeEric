@@ -14,7 +14,6 @@
       <a class="nav-link" routerLink="/recommendations">Recomendaciones</a>
       <a class="nav-link" routerLink="/operations">Operaciones</a>
       <a class="nav-link" routerLink="/history">Historial</a>
-      <a class="nav-link">Configuracion</a>
     </nav>
 
     <div class="sidebar-user d-flex align-items-center gap-2 mt-auto pt-3">
@@ -58,6 +57,7 @@
         <button
           type="button"
           class="asset-card w-100 h-100 rounded-3 p-3 text-start"
+          [disabled]="item.symbol === '-'"
           [class.selected]="item.symbol === selectedChartSymbol"
           (click)="selectSymbol(item.symbol)"
         >

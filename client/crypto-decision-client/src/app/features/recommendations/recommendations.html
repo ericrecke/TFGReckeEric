@@ -14,7 +14,6 @@
       <a class="nav-link active">Recomendaciones</a>
       <a class="nav-link" routerLink="/operations">Operaciones</a>
       <a class="nav-link" routerLink="/history">Historial</a>
-      <a class="nav-link">Configuracion</a>
     </nav>
 
     <div class="sidebar-user d-flex align-items-center gap-2 mt-auto pt-3">
@@ -115,8 +114,15 @@
             <span class="text-secondary small">{{ totalRecommendations }} resultados</span>
           </div>
 
-          <div class="empty-state" *ngIf="!loading && !recommendations.length">
-            No hay recomendaciones guardadas para estos filtros. Genere una desde Analisis.
+          <div class="empty-state compact-empty" *ngIf="!loading && !recommendations.length">
+            <strong class="d-block text-white mb-1">
+              {{ selectedSymbol ? 'Sin resultados para ' + selectedSymbol : 'Sin recomendaciones' }}
+            </strong>
+            <span>
+              {{ selectedType
+                ? 'No hay recomendaciones que coincidan con todos los filtros.'
+                : 'Este activo todavia no tiene un analisis con recomendacion.' }}
+            </span>
           </div>
 
           <div class="recommendation-list d-grid gap-2" *ngIf="recommendations.length">
@@ -369,9 +375,37 @@
           </ng-container>
 
           <ng-template #noSelection>
-            <div class="empty-state">
-              Seleccione una recomendacion para revisar la decision, el riesgo, la confianza y el motivo.
+            <div class="empty-state empty-recommendation" *ngIf="loading; else noRecommendations">
+              <span class="spinner-border spinner-border-sm"></span>
+              <span>Cargando recomendaciones...</span>
             </div>
+
+            <ng-template #noRecommendations>
+              <div class="empty-state empty-recommendation">
+                <img class="empty-recommendation-logo" src="/dssLogo.png" alt="Logo DSS Trading">
+                <span class="section-kicker">Recomendacion pendiente</span>
+                <h2 class="h5 text-white mb-1">
+                  {{ selectedSymbol ? selectedSymbol + ' todavia no tiene una recomendacion' : 'No hay recomendaciones para mostrar' }}
+                </h2>
+                <p class="mb-2">
+                  Para obtener una recomendacion primero debe generar un analisis del activo.
+                  El sistema evaluara mercado, indicadores, riesgo y el Modelo DSS v1.
+                </p>
+                <div class="d-flex justify-content-center gap-2 flex-wrap mt-2">
+                  <button class="btn btn-primary fw-bold" type="button" (click)="goToAnalysis(selectedSymbol)">
+                    {{ selectedSymbol ? 'Analizar ' + selectedSymbol : 'Ir a Analisis' }}
+                  </button>
+                  <button
+                    class="btn btn-outline-secondary fw-bold"
+                    type="button"
+                    *ngIf="selectedSymbol || selectedType"
+                    (click)="clearFilters()"
+                  >
+                    Limpiar filtros
+                  </button>
+                </div>
+              </div>
+            </ng-template>
           </ng-template>
         </div>
       </article>

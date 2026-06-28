@@ -51,7 +51,6 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   private viewInitialized = false;
   private readonly refreshIntervalMs = 30000;
   private readonly liveRefreshIntervalMs = 5000;
-  private readonly fallbackSymbols = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT', 'XRPUSDT'];
   private readonly destroy$ = new Subject<void>();
   private marketRefreshInProgress = false;
   private liveRefreshInProgress = false;
@@ -97,7 +96,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
         this.changeDetectorRef.detectChanges();
       },
       error: () => {
-        this.symbols = [...this.fallbackSymbols];
+        this.symbols = [];
         this.changeDetectorRef.detectChanges();
       }
     });
@@ -126,7 +125,8 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
         this.selectedChartSymbol =
           this.selectedChartSymbol ||
           response.symbols?.[0] ||
-          this.fallbackSymbols[0];
+          this.symbols[0] ||
+          '';
         this.lastUpdatedAt = new Date();
         this.loadPriceChart(this.selectedChartSymbol);
         this.changeDetectorRef.detectChanges();
@@ -178,7 +178,13 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
       return this.marketData;
     }
 
-    return this.fallbackSymbols.map((symbol) => ({
+    const placeholderSymbols = this.symbols.slice(0, 5);
+
+    while (placeholderSymbols.length < 5) {
+      placeholderSymbols.push('-');
+    }
+
+    return placeholderSymbols.map((symbol) => ({
       symbol,
       price: 0,
       priceChangePercent: 0,

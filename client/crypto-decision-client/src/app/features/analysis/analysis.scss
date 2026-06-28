@@ -88,17 +88,11 @@
   border-style: dashed;
 }
 
-.empty-result-mark {
-  width: 42px;
-  height: 42px;
-  display: inline-grid;
-  place-items: center;
-  color: #7db3ff;
-  background: rgba(13, 110, 253, 0.12);
-  border: 1px solid rgba(13, 110, 253, 0.35);
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 800;
+.empty-result-logo {
+  width: 50px;
+  height: 50px;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 18px rgba(13, 110, 253, 0.28));
 }
 
 .indicator-tile span,

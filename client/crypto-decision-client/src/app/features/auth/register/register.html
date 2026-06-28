@@ -1,90 +1,157 @@
-<main class="min-vh-100 bg-light d-flex align-items-center py-5">
-  <div class="container">
-    <div class="row justify-content-center">
-      <div class="col-12 col-sm-10 col-md-7 col-lg-5 col-xl-4">
-        <div class="card shadow-sm border-0">
-          <div class="card-body p-4 p-md-5">
-            <h1 class="h3 mb-2">Crear cuenta</h1>
-            <p class="text-secondary mb-4">Registrate para acceder al sistema de soporte a decisiones.</p>
+<main class="register-shell min-vh-100 d-flex align-items-center py-4 py-lg-5">
+  <div class="market-glow market-glow-one"></div>
+  <div class="market-glow market-glow-two"></div>
 
-            <form (ngSubmit)="register()" class="d-grid gap-3">
+  <div class="container position-relative">
+    <section class="register-frame overflow-hidden">
+      <div class="row g-0">
+        <div class="col-lg-5 d-none d-lg-flex">
+          <div class="register-intro d-flex flex-column justify-content-between w-100 p-5">
+            <div class="d-flex align-items-center gap-3">
+              <img class="brand-logo" src="/dssLogo.png" alt="Logo DSS Trading">
               <div>
+                <strong class="d-block text-white">DSS Trading</strong>
+                <span class="intro-muted small">Soporte inteligente para tus decisiones</span>
+              </div>
+            </div>
+
+            <div class="intro-copy">
+              <span class="eyebrow">Tu espacio de analisis</span>
+              <h1>Empeza a operar con contexto.</h1>
+              <p>
+                Crea tu cuenta para configurar riesgo, analizar activos y conservar
+                el historial de tus decisiones.
+              </p>
+
+              <div class="benefit-list d-grid gap-3 mt-4">
+                <div class="benefit-item">
+                  <span>01</span>
+                  <div>
+                    <strong>Mercado actualizado</strong>
+                    <small>Precios y velas de pares Spot/USDT.</small>
+                  </div>
+                </div>
+                <div class="benefit-item">
+                  <span>02</span>
+                  <div>
+                    <strong>Analisis orientativo</strong>
+                    <small>Indicadores y Modelo DSS v1.</small>
+                  </div>
+                </div>
+                <div class="benefit-item">
+                  <span>03</span>
+                  <div>
+                    <strong>Riesgo bajo control</strong>
+                    <small>Parametros definidos por cada usuario.</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <p class="intro-note mb-0">
+              El sistema brinda soporte. La decision final siempre corresponde al usuario.
+            </p>
+          </div>
+        </div>
+
+        <div class="col-12 col-lg-7">
+          <div class="register-panel d-flex flex-column justify-content-center h-100 p-4 p-sm-5">
+            <div class="d-flex d-lg-none align-items-center gap-2 mb-4">
+              <img class="brand-logo" src="/dssLogo.png" alt="Logo DSS Trading">
+              <strong class="text-white">DSS Trading</strong>
+            </div>
+
+            <span class="eyebrow mb-2">Registro seguro</span>
+            <h2 class="text-white mb-2">Crear cuenta</h2>
+            <p class="register-muted mb-4">Completa tus datos para acceder al panel.</p>
+
+            <form (ngSubmit)="register()" class="row g-3">
+              <div class="col-12">
                 <label for="name" class="form-label">Nombre</label>
                 <input
                   id="name"
-                  class="form-control"
+                  class="form-control register-control"
                   type="text"
                   [(ngModel)]="name"
                   name="name"
-                  placeholder="Ingrese su nombre"
+                  placeholder="Tu nombre"
+                  autocomplete="name"
                   required
                 />
               </div>
 
-              <div>
+              <div class="col-12">
                 <label for="email" class="form-label">Email</label>
                 <input
                   id="email"
-                  class="form-control"
+                  class="form-control register-control"
                   type="email"
                   [(ngModel)]="email"
                   name="email"
-                  placeholder="Ingrese su email"
+                  placeholder="usuario@email.com"
                   autocomplete="email"
                   required
                   email
                 />
               </div>
 
-              <div>
+              <div class="col-12 col-md-6">
                 <label for="password" class="form-label">Contrasena</label>
                 <input
                   id="password"
-                  class="form-control"
+                  class="form-control register-control"
                   type="password"
                   [(ngModel)]="password"
                   name="password"
-                  placeholder="Ingrese su contrasena"
+                  placeholder="Crea una contrasena"
+                  autocomplete="new-password"
                   required
                 />
-                <div class="form-text">
+              </div>
+
+              <div class="col-12 col-md-6">
+                <label for="confirmPassword" class="form-label">Confirmar contrasena</label>
+                <input
+                  id="confirmPassword"
+                  class="form-control register-control"
+                  type="password"
+                  [(ngModel)]="confirmPassword"
+                  name="confirmPassword"
+                  placeholder="Repeti la contrasena"
+                  autocomplete="new-password"
+                  required
+                />
+              </div>
+
+              <div class="col-12">
+                <div class="password-requirements">
                   Minimo 8 caracteres, una mayuscula, una minuscula, un numero y un caracter especial.
                 </div>
               </div>
 
-              <div>
-                <label for="confirmPassword" class="form-label">Confirmar contrasena</label>
-                <input
-                  id="confirmPassword"
-                  class="form-control"
-                  type="password"
-                  [(ngModel)]="confirmPassword"
-                  name="confirmPassword"
-                  placeholder="Repita su contrasena"
-                  required
-                />
+              <div class="col-12" *ngIf="errorMessage">
+                <div class="alert alert-danger mb-0 py-2">{{ errorMessage }}</div>
               </div>
 
-              <div class="alert alert-danger mb-0" *ngIf="errorMessage">
-                {{ errorMessage }}
+              <div class="col-12" *ngIf="successMessage">
+                <div class="alert alert-success mb-0 py-2">{{ successMessage }}</div>
               </div>
 
-              <div class="alert alert-success mb-0" *ngIf="successMessage">
-                {{ successMessage }}
+              <div class="col-12">
+                <button type="submit" class="btn btn-primary register-button w-100" [disabled]="loading">
+                  <span class="spinner-border spinner-border-sm me-2" *ngIf="loading"></span>
+                  {{ loading ? 'Registrando...' : 'Crear mi cuenta' }}
+                </button>
               </div>
-
-              <button type="submit" class="btn btn-primary w-100" [disabled]="loading">
-                {{ loading ? 'Registrando...' : 'Registrarse' }}
-              </button>
             </form>
 
-            <p class="text-center text-secondary mt-4 mb-0">
-              Ya tenes cuenta?
+            <div class="login-link text-center mt-4">
+              <span>Ya tenes cuenta?</span>
               <a routerLink="/login">Iniciar sesion</a>
-            </p>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </section>
   </div>
 </main>
