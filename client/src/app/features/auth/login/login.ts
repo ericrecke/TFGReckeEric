@@ -45,8 +45,15 @@ export class LoginComponent {
         },
         error: (error) => {
           this.loading = false;
-          this.errorMessage =
-            error.error?.message || 'Error al iniciar sesion.';
+          const message = error.error?.message;
+
+          if (message === 'User account is inactive') {
+            this.errorMessage = 'La cuenta esta inactiva. Contacte a un administrador.';
+          } else if (message === 'Invalid credentials') {
+            this.errorMessage = 'Email o contrasena incorrectos.';
+          } else {
+            this.errorMessage = message || 'Error al iniciar sesion.';
+          }
         }
       });
   }

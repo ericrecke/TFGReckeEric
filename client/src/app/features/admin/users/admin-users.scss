@@ -1,0 +1,141 @@
+.admin-shell {
+  grid-template-columns: 240px 1fr;
+  background: #07111f;
+  color: #e5eefc;
+}
+
+.sidebar {
+  background: linear-gradient(180deg, #081426 0%, #06101e 100%);
+  border-right: 1px solid #172337;
+}
+
+.brand-logo,
+.user-avatar {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  flex: 0 0 auto;
+}
+
+.brand-logo {
+  object-fit: contain;
+}
+
+.user-avatar {
+  background: #0d6efd;
+  color: #ffffff;
+  font-weight: 800;
+}
+
+.sidebar-user {
+  border-top: 1px solid #172337;
+}
+
+.nav-link {
+  color: #aeb9cc;
+  cursor: pointer;
+}
+
+.nav-link:hover,
+.nav-link.active {
+  color: #ffffff;
+}
+
+.admin-role {
+  color: #facc15;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.admin-page {
+  min-width: 0;
+}
+
+.admin-card {
+  background: #0d1b2d;
+  border: 1px solid #1c2c42;
+}
+
+.metric-label {
+  color: #8b98ad;
+  display: block;
+  font-size: 12px;
+}
+
+.metric-value {
+  color: #ffffff;
+  display: block;
+  font-size: 28px;
+  margin-top: 8px;
+}
+
+.positive-text {
+  color: #22c55e;
+}
+
+.negative-text {
+  color: #ef4444;
+}
+
+.warning-text {
+  color: #facc15;
+}
+
+.form-select-dark,
+.form-control-dark {
+  background-color: #081426;
+  border-color: #2a3b53;
+  color: #e5eefc;
+}
+
+.form-select-dark:disabled {
+  background-color: #101a28;
+  color: #6f7d91;
+}
+
+.table-dark {
+  --bs-table-bg: #0d1b2d;
+  --bs-table-border-color: #1c2c42;
+  --bs-table-hover-bg: #111f33;
+}
+
+.current-user {
+  border: 1px solid rgba(250, 204, 21, 0.4);
+  border-radius: 999px;
+  color: #facc15;
+  font-size: 10px;
+  padding: 2px 7px;
+}
+
+.loading-label {
+  color: #7db3ff;
+  font-size: 12px;
+}
+
+.empty-state {
+  color: #8b98ad;
+  padding: 28px !important;
+}
+
+@media (max-width: 1020px) {
+  .admin-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar .nav {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .admin-page {
+    padding: 18px !important;
+  }
+
+  .sidebar .nav {
+    grid-template-columns: 1fr;
+  }
+}

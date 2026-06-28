@@ -89,9 +89,7 @@ export class RegisterComponent {
       .subscribe({
         next: () => {
           this.successMessage = 'Usuario registrado correctamente.';
-          setTimeout(() => {
-            this.router.navigate(['/login']);
-          }, 1000);
+          this.router.navigate(['/dashboard']);
         },
         error: (error) => {
           this.errorMessage = this.getRegisterErrorMessage(error);

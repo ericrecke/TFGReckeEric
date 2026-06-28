@@ -14,6 +14,7 @@
       <a class="nav-link" routerLink="/recommendations">Recomendaciones</a>
       <a class="nav-link" routerLink="/operations">Operaciones</a>
       <a class="nav-link active">Historial</a>
+      <a class="nav-link" routerLink="/admin/users" *ngIf="user?.role === 'admin'">Administracion</a>
     </nav>
 
     <div class="sidebar-user d-flex align-items-center gap-2 mt-auto pt-3">

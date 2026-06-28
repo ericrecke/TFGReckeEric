@@ -106,7 +106,13 @@ Ejecutar desde `server/`:
 ```powershell
 npm run dev   # Desarrollo con nodemon
 npm start     # Ejecucion normal
+npm run user:promote -- usuario@correo.com  # Promover una cuenta existente a administrador
 ```
+
+El registro publico crea siempre usuarios con rol `user`. Para habilitar el
+primer administrador, registrar primero la cuenta y ejecutar el comando
+`user:promote`. Los administradores pueden gestionar roles y estados desde
+`/admin/users`, pero nunca reciben ni visualizan el hash de las contrasenas.
 
 ### Frontend
 
@@ -131,7 +137,7 @@ client/dist/crypto-decision-client
 3. Esperar la confirmacion de conexion y sincronizacion de Binance.
 4. Iniciar Angular en el puerto 4200.
 5. Registrar un usuario.
-6. Iniciar sesion y acceder al dashboard.
+6. La aplicacion inicia la sesion y redirige al dashboard.
 
 ## Solucion de problemas
 

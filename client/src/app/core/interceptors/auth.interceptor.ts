@@ -25,6 +25,12 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
 
   return next(authRequest).pipe(
     catchError((error: HttpErrorResponse) => {
+      if (error.status === 403 && error.error?.message === 'User account is inactive') {
+        authService.logout();
+        router.navigate(['/login']);
+        return throwError(() => error);
+      }
+
       if (error.status !== 401 || isAuthEndpoint(request.url) || !authService.getRefreshToken()) {
         if (error.status === 401 && !isAuthEndpoint(request.url)) {
           authService.logout();

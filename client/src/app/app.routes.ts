@@ -6,7 +6,9 @@ import { AnalysisComponent } from './features/analysis/analysis';
 import { RecommendationsComponent } from './features/recommendations/recommendations';
 import { OperationsComponent } from './features/operations/operations';
 import { HistoryComponent } from './features/history/history';
+import { AdminUsersComponent } from './features/admin/users/admin-users';
 import { authGuard } from './core/guards/auth-guard';
+import { adminGuard } from './core/guards/admin-guard';
 export const routes: Routes = [
     {
         path: '',
@@ -45,6 +47,11 @@ export const routes: Routes = [
         path: 'history',
         component: HistoryComponent,
         canActivate: [authGuard]
+    },
+    {
+        path: 'admin/users',
+        component: AdminUsersComponent,
+        canActivate: [adminGuard]
     },
     {
         path: '**',

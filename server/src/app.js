@@ -6,6 +6,7 @@ const marketRoutes = require('./routes/market.routes');
 const analysisRoutes = require('./routes/analysis.routes');
 const recommendationRoutes = require('./routes/recommendation.routes');
 const operationRoutes = require('./routes/operation.routes');
+const adminRoutes = require('./routes/admin.routes');
 
 const app = express();
 
@@ -21,5 +22,6 @@ app.use('/api/market', marketRoutes);
 app.use('/api/analysis', analysisRoutes);
 app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/operations', operationRoutes);
+app.use('/api/admin', adminRoutes);
 
 module.exports = app;

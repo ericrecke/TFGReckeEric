@@ -41,8 +41,9 @@ const register = async (req, res) => {
     try {
         const { name, username, email, password } = req.body;
         const displayName = name || username;
+        const normalizedEmail = String(email || '').trim().toLowerCase();
 
-        if (!displayName || !email || !password) {
+        if (!displayName || !normalizedEmail || !password) {
             return res.status(400).json({ message: 'Name, email, and password are required' });
         }
 
@@ -52,17 +53,23 @@ const register = async (req, res) => {
             });
         }
 
-        const existingUser = await User.findOne({ email });
+        const existingUser = await User.findOne({ email: normalizedEmail });
         if (existingUser) {
             return res.status(409).json({ message: 'Email already in use' });
         }
 
         const passwordHash = await bcrypt.hash(password, 10);
 
-        const user = await User.create({ name: displayName, email, passwordHash });
+        const user = await User.create({
+            name: String(displayName).trim(),
+            email: normalizedEmail,
+            passwordHash
+        });
 
         return res.status(201).json({
             message: "User registered successfully",
+            token: generateToken(user),
+            refreshToken: generateRefreshToken(user),
             user: buildAuthUser(user)
         });
     } catch (error) {
@@ -74,7 +81,7 @@ const register = async (req, res) => {
 const login = async (req, res) => {
     try {
         const { email, username, password } = req.body;
-        const loginEmail = email || username;
+        const loginEmail = String(email || username || '').trim().toLowerCase();
 
         if (!loginEmail || !password) {
             return res.status(400).json({
@@ -87,6 +94,12 @@ const login = async (req, res) => {
         if (!user) {
             return res.status(401).json({
                 message: "Invalid credentials"
+            });
+        }
+
+        if (user.status !== 'active') {
+            return res.status(403).json({
+                message: 'User account is inactive'
             });
         }
 
@@ -133,6 +146,10 @@ const refresh = async (req, res) => {
 
         if (!user) {
             return res.status(401).json({ message: 'User not found' });
+        }
+
+        if (user.status !== 'active') {
+            return res.status(403).json({ message: 'User account is inactive' });
         }
 
         return res.json({

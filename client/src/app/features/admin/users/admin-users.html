@@ -1,0 +1,188 @@
+<div class="admin-shell d-grid min-vh-100">
+  <aside class="sidebar d-flex flex-column gap-4 p-3">
+    <div class="d-flex align-items-center gap-2">
+      <img class="brand-logo" src="/dssLogo.png" alt="Logo DSS Trading">
+      <div>
+        <strong class="d-block text-white">DSS Trading</strong>
+        <span class="text-secondary small">Soporte a decisiones</span>
+      </div>
+    </div>
+
+    <nav class="nav nav-pills flex-column gap-2" aria-label="Navegacion principal">
+      <a class="nav-link" routerLink="/dashboard">Dashboard</a>
+      <a class="nav-link" routerLink="/analysis">Analisis</a>
+      <a class="nav-link" routerLink="/recommendations">Recomendaciones</a>
+      <a class="nav-link" routerLink="/operations">Operaciones</a>
+      <a class="nav-link" routerLink="/history">Historial</a>
+      <a class="nav-link active" routerLink="/admin/users">Administracion</a>
+    </nav>
+
+    <div class="sidebar-user d-flex align-items-center gap-2 mt-auto pt-3">
+      <div class="user-avatar">{{ user?.name?.charAt(0) || 'A' }}</div>
+      <div class="min-w-0">
+        <strong class="d-block text-white">{{ user?.name || 'Administrador' }}</strong>
+        <span class="d-block admin-role">Administrador</span>
+        <span class="d-block text-secondary small text-truncate">{{ user?.email }}</span>
+      </div>
+    </div>
+  </aside>
+
+  <main class="admin-page p-4">
+    <header class="d-flex align-items-center justify-content-between gap-3 mb-4 flex-wrap">
+      <div>
+        <h1 class="h3 text-white mb-1">Gestion de usuarios</h1>
+        <p class="text-secondary mb-0">Administra accesos y roles sin exponer credenciales.</p>
+      </div>
+      <button class="btn btn-danger fw-bold" type="button" (click)="logout()">Cerrar sesion</button>
+    </header>
+
+    <div class="alert alert-danger" *ngIf="errorMessage">{{ errorMessage }}</div>
+    <div class="alert alert-success" *ngIf="successMessage">{{ successMessage }}</div>
+
+    <section class="row g-3 mb-3">
+      <article class="col-6 col-xl-3">
+        <div class="admin-card rounded-3 p-3 h-100">
+          <span class="metric-label">Usuarios totales</span>
+          <strong class="metric-value">{{ summary.total }}</strong>
+        </div>
+      </article>
+      <article class="col-6 col-xl-3">
+        <div class="admin-card rounded-3 p-3 h-100">
+          <span class="metric-label">Activos</span>
+          <strong class="metric-value positive-text">{{ summary.active }}</strong>
+        </div>
+      </article>
+      <article class="col-6 col-xl-3">
+        <div class="admin-card rounded-3 p-3 h-100">
+          <span class="metric-label">Inactivos</span>
+          <strong class="metric-value negative-text">{{ summary.inactive }}</strong>
+        </div>
+      </article>
+      <article class="col-6 col-xl-3">
+        <div class="admin-card rounded-3 p-3 h-100">
+          <span class="metric-label">Administradores</span>
+          <strong class="metric-value warning-text">{{ summary.admins }}</strong>
+        </div>
+      </article>
+    </section>
+
+    <section class="admin-card rounded-3 p-3 mb-3">
+      <div class="row g-3 align-items-end">
+        <div class="col-12 col-lg-5">
+          <label class="form-label text-secondary" for="user-search">Nombre o email</label>
+          <input
+            id="user-search"
+            class="form-control form-control-dark"
+            type="search"
+            [(ngModel)]="search"
+            (keyup.enter)="applyFilters()"
+            placeholder="Buscar usuario"
+          >
+        </div>
+        <div class="col-6 col-lg-2">
+          <label class="form-label text-secondary" for="role-filter">Rol</label>
+          <select id="role-filter" class="form-select form-select-dark" [(ngModel)]="selectedRole">
+            <option value="">Todos</option>
+            <option value="user">Trader</option>
+            <option value="admin">Administrador</option>
+          </select>
+        </div>
+        <div class="col-6 col-lg-2">
+          <label class="form-label text-secondary" for="status-filter">Estado</label>
+          <select id="status-filter" class="form-select form-select-dark" [(ngModel)]="selectedStatus">
+            <option value="">Todos</option>
+            <option value="active">Activo</option>
+            <option value="inactive">Inactivo</option>
+          </select>
+        </div>
+        <div class="col-6 col-lg-2 d-grid">
+          <button class="btn btn-primary fw-bold" type="button" (click)="applyFilters()">Aplicar</button>
+        </div>
+        <div class="col-6 col-lg-1 d-grid">
+          <button class="btn btn-outline-secondary" type="button" (click)="clearFilters()">Limpiar</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="admin-card rounded-3 p-3">
+      <div class="d-flex justify-content-between align-items-center gap-3 mb-3">
+        <div>
+          <h2 class="h6 text-white mb-1">Usuarios registrados</h2>
+          <small class="text-secondary">Las contrasenas no se muestran ni se recuperan.</small>
+        </div>
+        <span class="loading-label" *ngIf="loading">Cargando...</span>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-dark align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Usuario</th>
+              <th>Registro</th>
+              <th>Rol</th>
+              <th>Estado</th>
+              <th class="text-end">Accion</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let managedUser of users">
+              <td>
+                <strong class="d-block text-white">{{ managedUser.name }}</strong>
+                <small class="text-secondary">{{ managedUser.email }}</small>
+                <span class="current-user ms-2" *ngIf="isCurrentUser(managedUser)">Tu cuenta</span>
+              </td>
+              <td>{{ managedUser.createdAt | date:'short' }}</td>
+              <td>
+                <select
+                  class="form-select form-select-sm form-select-dark"
+                  [(ngModel)]="managedUser.role"
+                  [disabled]="isCurrentUser(managedUser)"
+                  [attr.aria-label]="'Rol de ' + managedUser.email"
+                >
+                  <option value="user">Trader</option>
+                  <option value="admin">Administrador</option>
+                </select>
+              </td>
+              <td>
+                <select
+                  class="form-select form-select-sm form-select-dark"
+                  [(ngModel)]="managedUser.status"
+                  [disabled]="isCurrentUser(managedUser)"
+                  [attr.aria-label]="'Estado de ' + managedUser.email"
+                >
+                  <option value="active">Activo</option>
+                  <option value="inactive">Inactivo</option>
+                </select>
+              </td>
+              <td class="text-end">
+                <button
+                  class="btn btn-sm btn-primary fw-bold"
+                  type="button"
+                  (click)="saveUser(managedUser)"
+                  [disabled]="savingUserId === managedUser._id || isCurrentUser(managedUser)"
+                >
+                  {{ savingUserId === managedUser._id ? 'Guardando...' : 'Guardar' }}
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="!loading && !users.length">
+              <td colspan="5" class="empty-state text-center">No se encontraron usuarios.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <footer class="d-flex justify-content-between align-items-center gap-3 mt-3">
+        <small class="text-secondary">Pagina {{ currentPage }} de {{ totalPages }}</small>
+        <div class="btn-group">
+          <button class="btn btn-sm btn-outline-secondary" type="button" (click)="changePage(currentPage - 1)" [disabled]="currentPage <= 1">
+            Anterior
+          </button>
+          <button class="btn btn-sm btn-outline-secondary" type="button" (click)="changePage(currentPage + 1)" [disabled]="currentPage >= totalPages">
+            Siguiente
+          </button>
+        </div>
+      </footer>
+    </section>
+  </main>
+</div>

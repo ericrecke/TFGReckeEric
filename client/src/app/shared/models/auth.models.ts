@@ -10,10 +10,10 @@ export interface LoginRequest {
 }
 
 export interface AuthUser {
-    id: number;
+    id: string;
     name: string;
     email: string;
-    role: string;
+    role: 'user' | 'admin';
 }
 
 export interface LoginResponse {
@@ -29,7 +29,4 @@ export interface RefreshTokenRequest {
 
 export interface RefreshTokenResponse extends LoginResponse {}
 
-export interface RegisterResponse {
-    message: string;
-    user: AuthUser;
-}
+export interface RegisterResponse extends LoginResponse {}

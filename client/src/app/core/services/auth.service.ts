@@ -22,7 +22,9 @@ export class AuthService {
   constructor(private http: HttpClient) { }
 
   register(data: RegisterRequest): Observable<RegisterResponse> {
-    return this.http.post<RegisterResponse>(`${this.apiUrl}/register`, data);
+    return this.http.post<RegisterResponse>(`${this.apiUrl}/register`, data).pipe(
+      tap((response) => this.storeSession(response))
+    );
   }
 
   login(data: LoginRequest): Observable<LoginResponse> {
