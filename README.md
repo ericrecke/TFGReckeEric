@@ -16,12 +16,13 @@ predictivo. No ejecuta operaciones automaticamente.
 
 ```text
 .
-|-- client/crypto-decision-client/   Aplicacion Angular
+|-- client/                          Aplicacion Angular
 |-- server/                          API REST y acceso a MongoDB/Binance
 `-- README.md
 ```
 
 ## Requisitos
+
 
 - Node.js 20.19 o superior.
 - npm 10 o superior.
@@ -81,7 +82,7 @@ Server is running on port 3000
 Abrir otra terminal desde la raiz del repositorio:
 
 ```powershell
-cd client/crypto-decision-client
+cd client
 npm install
 npm start
 ```
@@ -103,7 +104,7 @@ npm start     # Ejecucion normal
 
 ### Frontend
 
-Ejecutar desde `client/crypto-decision-client/`:
+Ejecutar desde `client/`:
 
 ```powershell
 npm start       # Servidor de desarrollo
@@ -114,7 +115,7 @@ npm test        # Pruebas del frontend
 La compilacion se genera en:
 
 ```text
-client/crypto-decision-client/dist/crypto-decision-client
+client/dist/crypto-decision-client
 ```
 
 ## Flujo inicial
