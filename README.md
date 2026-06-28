@@ -3,7 +3,7 @@
 Sistema de soporte a decisiones para analizar criptomonedas de Binance. La
 aplicacion muestra precios y velas, calcula indicadores tecnicos, permite
 configurar riesgo y genera recomendaciones orientativas mediante un modelo
-predictivo. No ejecuta operaciones automaticamente.
+predictivo.
 
 ## Tecnologias
 - Frontend: Angular 21, Bootstrap 5 y Lightweight Charts.
