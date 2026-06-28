@@ -3,3 +3,5 @@
 npm-debug.log
 yarn-error.log
 /server/node_modules
+/server/.env
+server/.env
